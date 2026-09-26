@@ -10,6 +10,18 @@ import Database from 'better-sqlite3';
  * 迁移以 PRAGMA user_version 递增，逐条应用；重复打开幂等。
  */
 
+/** 对已存在的表补齐缺失列（旧库升级；ALTER ADD COLUMN 不能带 NOT NULL，故列定义放宽）。 */
+function ensureColumns(db: Database.Database, table: string, columns: Record<string, string>): void {
+  const existing = new Set(
+    (db.pragma(`table_info(${table})`) as Array<{ name: string }>).map((column) => column.name),
+  );
+  for (const [name, definition] of Object.entries(columns)) {
+    if (!existing.has(name)) {
+      db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${definition}`);
+    }
+  }
+}
+
 /** v1 建表。snapshot 的 `day` 即"本地日期"，是唯一约束的物化列。 */
 function migrationV1(db: Database.Database): void {
   db.exec(`
@@ -47,6 +59,19 @@ function migrationV1(db: Database.Database): void {
       value TEXT NOT NULL
     );
   `);
+
+  // 旧库可能已带残缺的 repository 表：补齐 v1 需要的列
+  ensureColumns(db, 'repository', {
+    owner: 'TEXT',
+    name: 'TEXT',
+    added_at: 'TEXT',
+    stars: 'INTEGER',
+    forks: 'INTEGER',
+    open_issues: 'INTEGER',
+    pushed_at: 'TEXT',
+    latest_release_tag: 'TEXT',
+    fetched_at: 'TEXT',
+  });
 }
 
 const MIGRATIONS: ReadonlyArray<(db: Database.Database) => void> = [migrationV1];

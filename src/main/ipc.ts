@@ -7,10 +7,9 @@ import type { OctoFacade } from '../shared/types';
  * 通道与 preload 端一一对应（见 src/shared/ipc.ts）。
  */
 export function registerIpc(facade: OctoFacade): void {
-  ipcMain.handle(IPC_CHANNELS.tokenState, () => facade.tokenState());
-  ipcMain.handle(IPC_CHANNELS.validateToken, (_event, token: string) => facade.validateToken(token));
-  ipcMain.handle(IPC_CHANNELS.saveToken, (_event, token: string) => facade.saveToken(token));
-  ipcMain.handle(IPC_CHANNELS.clearToken, () => facade.clearToken());
+  ipcMain.handle(IPC_CHANNELS.accessTokenState, () => facade.accessTokenState());
+  ipcMain.handle(IPC_CHANNELS.validateAccessToken, (_event, accessToken: string) => facade.validateAccessToken(accessToken));
+  ipcMain.handle(IPC_CHANNELS.saveAccessToken, (_event, accessToken: string) => facade.saveAccessToken(accessToken));
   ipcMain.handle(IPC_CHANNELS.getSettings, () => facade.getSettings());
   ipcMain.handle(IPC_CHANNELS.updateSettings, (_event, patch: Record<string, string>) =>
     facade.updateSettings(patch),

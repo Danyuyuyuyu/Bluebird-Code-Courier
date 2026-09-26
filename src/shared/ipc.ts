@@ -1,9 +1,8 @@
 /** IPC 通道白名单：preload 与主进程共同引用，渲染层只能经此访问用例门面。 */
 export const IPC_CHANNELS = {
-  tokenState: 'octo:tokenState',
-  validateToken: 'octo:validateToken',
-  saveToken: 'octo:saveToken',
-  clearToken: 'octo:clearToken',
+  accessTokenState: 'octo:accessTokenState',
+  validateAccessToken: 'octo:validateAccessToken',
+  saveAccessToken: 'octo:saveAccessToken',
   getSettings: 'octo:getSettings',
   updateSettings: 'octo:updateSettings',
   listRepositories: 'octo:listRepositories',

@@ -8,7 +8,7 @@
 // ---------- 错误（归一为五类） ----------
 
 /** 错误类别：令牌无效、限流、不存在/无权限、网络失败、未知。 */
-export type ErrorKind = 'token_invalid' | 'rate_limited' | 'not_found' | 'network' | 'unknown';
+export type ErrorKind = 'access_token_invalid' | 'rate_limited' | 'not_found' | 'network' | 'unknown';
 
 export interface NormalizedError {
   kind: ErrorKind;
@@ -107,11 +107,11 @@ export interface Detail {
 
 // ---------- 用例门面结果 ----------
 
-export interface TokenState {
+export interface AccessTokenState {
   configured: boolean;
 }
 
-export interface TokenResult {
+export interface AccessTokenResult {
   ok: boolean;
   error: NormalizedError | null;
 }
@@ -137,16 +137,15 @@ export interface DetailResult {
 export interface SettingsView {
   /** 偏好项（setting 表中的键值）。 */
   preferences: Record<string, string>;
-  tokenConfigured: boolean;
+  accessTokenConfigured: boolean;
 }
 
 /** 渲染层唯一入口：主进程用例门面。 */
 export interface OctoFacade {
   // 访问令牌
-  tokenState(): Promise<TokenState>;
-  validateToken(token: string): Promise<TokenResult>;
-  saveToken(token: string): Promise<TokenResult>;
-  clearToken(): Promise<void>;
+  accessTokenState(): Promise<AccessTokenState>;
+  validateAccessToken(accessToken: string): Promise<AccessTokenResult>;
+  saveAccessToken(accessToken: string): Promise<AccessTokenResult>;
   // 设置读写
   getSettings(): Promise<SettingsView>;
   updateSettings(patch: Record<string, string>): Promise<SettingsView>;

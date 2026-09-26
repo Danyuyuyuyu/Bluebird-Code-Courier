@@ -13,8 +13,9 @@ import type {
 } from '../../shared/types';
 import { listSnapshots, recordSnapshot } from './snapshots';
 import {
-  findRepositoryRow,
+  mustFindRepositoryRow,
   updateRepositoryGlance,
+  updateRepositoryLatestRelease,
   rowToGlance,
   type GlanceValues,
 } from './watchlist';
@@ -30,11 +31,11 @@ import {
  */
 export async function fetchGlanceValues(
   github: GitHubPort,
-  token: string,
+  accessToken: string,
   fullName: string,
 ): Promise<GlanceValues> {
-  const meta = await github.getRepositoryMeta(token, fullName);
-  const latestRelease = await github.getLatestRelease(token, fullName);
+  const meta = await github.getRepositoryMeta(accessToken, fullName);
+  const latestRelease = await github.getLatestRelease(accessToken, fullName);
   return {
     stars: meta.stars,
     forks: meta.forks,
@@ -54,9 +55,7 @@ export function applyGlanceValues(
   const capturedAt = clock.now();
   updateRepositoryGlance(db, repositoryId, values, capturedAt.toISOString());
   recordSnapshot(db, repositoryId, values, capturedAt);
-  const row = findRepositoryRow(db, repositoryId);
-  if (!row) throw new Error(`仓库不存在：${repositoryId}`);
-  return rowToGlance(row);
+  return rowToGlance(mustFindRepositoryRow(db, repositoryId));
 }
 
 // ---------- 全量抓取 ----------
@@ -75,13 +74,13 @@ export interface DetailValues {
  */
 export async function fetchDetailValues(
   github: GitHubPort,
-  token: string,
+  accessToken: string,
   fullName: string,
 ): Promise<DetailValues> {
-  const releases = await github.listReleases(token, fullName);
-  const commits = await github.listCommits(token, fullName);
-  const issuesAndPullRequests = await github.listIssues(token, fullName);
-  const latestBuild = await github.getLatestBuild(token, fullName);
+  const releases = await github.listReleases(accessToken, fullName);
+  const commits = await github.listCommits(accessToken, fullName);
+  const issuesAndPullRequests = await github.listIssues(accessToken, fullName);
+  const latestBuild = await github.getLatestBuild(accessToken, fullName);
 
   const issues: IssueItem[] = [];
   const pullRequests: PullRequestItem[] = [];
@@ -140,16 +139,11 @@ export function applyDetailValues(
   repositoryId: number,
   values: DetailValues,
 ): Detail {
-  const row = findRepositoryRow(db, repositoryId);
-  if (!row) throw new Error(`仓库不存在：${repositoryId}`);
+  const row = mustFindRepositoryRow(db, repositoryId);
 
   const capturedAt = clock.now();
   const latestReleaseTag = values.releases[0]?.tagName ?? null;
-  db.prepare('UPDATE repository SET latest_release_tag = ?, fetched_at = ? WHERE id = ?').run(
-    latestReleaseTag,
-    capturedAt.toISOString(),
-    repositoryId,
-  );
+  updateRepositoryLatestRelease(db, repositoryId, latestReleaseTag, capturedAt.toISOString());
   recordSnapshot(
     db,
     repositoryId,
@@ -163,10 +157,8 @@ export function applyDetailValues(
     capturedAt,
   );
 
-  const updated = findRepositoryRow(db, repositoryId);
-  if (!updated) throw new Error(`仓库不存在：${repositoryId}`);
   return {
-    repository: rowToGlance(updated),
+    repository: rowToGlance(mustFindRepositoryRow(db, repositoryId)),
     releases: values.releases,
     commits: values.commits,
     issues: values.issues,

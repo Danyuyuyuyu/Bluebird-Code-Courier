@@ -16,7 +16,7 @@ afterEach(() => {
 
 async function readyWithRepo(): Promise<Harness> {
   harness = createHarness();
-  await h().facade.saveToken('ghp_valid_token');
+  await h().facade.saveAccessToken('ghp_valid_token');
   h().github.addRepo(makeRepoData());
   await h().facade.addRepository('octo-demo/hello-world');
   return h();
@@ -61,7 +61,7 @@ describe('历史快照', () => {
 
   it('缺省值记空（无发版 → 空标签）', async () => {
     harness = createHarness();
-    await h().facade.saveToken('ghp_valid_token');
+    await h().facade.saveAccessToken('ghp_valid_token');
     h().github.addRepo(makeRepoData({ latestRelease: null, releases: [] }));
     await h().facade.addRepository('octo-demo/hello-world');
 

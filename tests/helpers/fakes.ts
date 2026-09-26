@@ -1,5 +1,5 @@
 import type { Clock } from '../../src/main/core/clock';
-import type { SecretBox } from '../../src/main/core/secrets/secret-box';
+import type { CipherBox } from '../../src/main/core/cipher/cipher-box';
 
 /** 可拨动的测试时钟。 */
 export class FakeClock implements Clock {
@@ -16,7 +16,7 @@ export class FakeClock implements Clock {
 }
 
 /** 假加密盒：密文不包含明文（base64 + 前缀），可逆。 */
-export class FakeSecretBox implements SecretBox {
+export class FakeCipherBox implements CipherBox {
   encrypt(plain: string): string {
     return `enc:${Buffer.from(plain, 'utf8').toString('base64')}`;
   }

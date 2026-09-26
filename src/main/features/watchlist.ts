@@ -50,6 +50,13 @@ export function findRepositoryRow(db: Database.Database, id: number): Repository
   return row ?? null;
 }
 
+/** 取行或抛错（业务前置条件不满足属于编程错误）。 */
+export function mustFindRepositoryRow(db: Database.Database, id: number): RepositoryRow {
+  const row = findRepositoryRow(db, id);
+  if (!row) throw new Error(`监控仓库不存在：${id}`);
+  return row;
+}
+
 export function findRepositoryByFullName(db: Database.Database, fullName: string): RepositoryRow | null {
   const row = db.prepare('SELECT * FROM repository WHERE full_name = ?').get(fullName) as
     | RepositoryRow
@@ -88,6 +95,20 @@ export function updateRepositoryGlance(
     values.openIssues,
     values.pushedAt,
     values.latestReleaseTag,
+    fetchedAt,
+    repositoryId,
+  );
+}
+
+/** 全量抓取的展示字段更新：只带最新发版标签与抓取时间（全量不含元数据调用）。 */
+export function updateRepositoryLatestRelease(
+  db: Database.Database,
+  repositoryId: number,
+  latestReleaseTag: string | null,
+  fetchedAt: string,
+): void {
+  db.prepare('UPDATE repository SET latest_release_tag = ?, fetched_at = ? WHERE id = ?').run(
+    latestReleaseTag,
     fetchedAt,
     repositoryId,
   );

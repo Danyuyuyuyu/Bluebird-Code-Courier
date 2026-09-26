@@ -11,17 +11,17 @@ export function normalizeError(error: unknown, fullName?: string): NormalizedErr
   if (error instanceof GitHubRequestError) {
     if (error.status === 401) {
       return {
-        kind: 'token_invalid',
+        kind: 'access_token_invalid',
         message: '访问令牌无效，请到设置页更换令牌',
         ...context,
       };
     }
-    const resetAt = rateLimitResetAt(error);
-    if (resetAt !== undefined) {
+    if (isRateLimited(error)) {
+      const resetAt = rateLimitResetAt(error);
       return {
         kind: 'rate_limited',
         message: '抓取被 GitHub 限流，配额恢复前暂不可用',
-        resetAt,
+        ...(resetAt === undefined ? {} : { resetAt }),
         ...context,
       };
     }
@@ -55,12 +55,15 @@ export function normalizeError(error: unknown, fullName?: string): NormalizedErr
   };
 }
 
-function rateLimitResetAt(error: GitHubRequestError): string | undefined {
-  const remaining = error.headers['x-ratelimit-remaining'];
-  const isRateLimited =
-    error.status === 429 || (error.status === 403 && (remaining === '0' || remaining === undefined && 'x-ratelimit-reset' in error.headers));
-  if (!isRateLimited) return undefined;
+/** 限流判定：429，或 403 且配额耗尽/带 Retry-After。 */
+function isRateLimited(error: GitHubRequestError): boolean {
+  if (error.status === 429) return true;
+  if (error.status !== 403) return false;
+  return error.headers['x-ratelimit-remaining'] === '0' || 'retry-after' in error.headers;
+}
 
+/** 限流恢复时间：优先 x-ratelimit-reset（epoch 秒），其次 retry-after（秒）；都没有则缺省。 */
+function rateLimitResetAt(error: GitHubRequestError): string | undefined {
   const reset = error.headers['x-ratelimit-reset'];
   if (reset && /^\d+$/.test(reset)) {
     return new Date(Number(reset) * 1000).toISOString();

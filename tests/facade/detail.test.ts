@@ -16,7 +16,7 @@ afterEach(() => {
 
 async function readyWithRepo(overrides: Partial<FakeRepoData> = {}): Promise<Harness> {
   harness = createHarness();
-  await h().facade.saveToken('ghp_valid_token');
+  await h().facade.saveAccessToken('ghp_valid_token');
   h().github.addRepo(makeRepoData(overrides));
   const added = await h().facade.addRepository('octo-demo/hello-world');
   if (!added.ok) throw new Error(`setup failed: ${added.error?.message}`);
@@ -164,7 +164,22 @@ describe('全量信息抓取（详情页）', () => {
     });
 
     h().github.failures.clear();
-    h().github.tokenInvalid = true;
-    expect((await h().facade.fetchDetail(id)).error).toMatchObject({ kind: 'token_invalid' });
+    h().github.accessTokenInvalid = true;
+    expect((await h().facade.fetchDetail(id)).error).toMatchObject({ kind: 'access_token_invalid' });
+  });
+
+  it('限流归一不依赖恢复时间头（无 reset/retry-after 也报限流）', async () => {
+    await readyWithRepo();
+    const id = (await h().facade.listRepositories())[0]!.id;
+
+    h().github.fail('octo-demo/hello-world', 'listReleases', fixtures.rateLimitedNoReset());
+    const first = await h().facade.fetchDetail(id);
+    expect(first.error?.kind).toBe('rate_limited');
+    expect(first.error?.resetAt).toBeUndefined();
+
+    h().github.failures.clear();
+    h().github.fail('octo-demo/hello-world', 'listReleases', fixtures.tooManyRequests());
+    const second = await h().facade.fetchDetail(id);
+    expect(second.error?.kind).toBe('rate_limited');
   });
 });

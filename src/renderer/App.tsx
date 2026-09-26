@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Glance, TokenState } from '../shared/types';
+import type { Glance, AccessTokenState } from '../shared/types';
 import { getApi } from './lib/api';
 import { ErrorBar } from './components/ErrorBar';
 import { EmptyState } from './components/EmptyState';
@@ -30,16 +30,16 @@ export function App() {
   const [notice, setNotice] = useState<string | null>(null);
 
   // 启动即查询访问令牌状态：未配置时先进设置页
-  const tokenStateQuery = useQuery({
-    queryKey: ['tokenState'],
-    queryFn: () => getApi().tokenState(),
+  const accessTokenStateQuery = useQuery({
+    queryKey: ['accessTokenState'],
+    queryFn: () => getApi().accessTokenState(),
   });
-  const configured = tokenStateQuery.data?.configured ?? false;
+  const configured = accessTokenStateQuery.data?.configured ?? false;
 
   useEffect(() => {
-    const state = tokenStateQuery.data;
+    const state = accessTokenStateQuery.data;
     if (state && !state.configured) setView('settings');
-  }, [tokenStateQuery.data]);
+  }, [accessTokenStateQuery.data]);
 
   useEffect(() => {
     if (!notice) return;
@@ -47,10 +47,10 @@ export function App() {
     return () => window.clearTimeout(timer);
   }, [notice]);
 
-  function handleTokenSaved(message?: string): void {
-    const next: TokenState = { configured: true };
-    queryClient.setQueryData(['tokenState'], next);
-    void queryClient.invalidateQueries({ queryKey: ['tokenState'] });
+  function handleAccessTokenSaved(message?: string): void {
+    const next: AccessTokenState = { configured: true };
+    queryClient.setQueryData(['accessTokenState'], next);
+    void queryClient.invalidateQueries({ queryKey: ['accessTokenState'] });
     setNotice(message ?? '访问令牌已保存并验证通过');
     setView('watchlist');
   }
@@ -63,25 +63,25 @@ export function App() {
   const activeView: View = configured ? view : 'settings';
 
   let content;
-  if (tokenStateQuery.isPending) {
+  if (accessTokenStateQuery.isPending) {
     content = (
       <div className="flex items-center justify-center gap-2 py-20 text-sm text-slate-400">
         <Spinner />
         正在启动…
       </div>
     );
-  } else if (tokenStateQuery.isError) {
+  } else if (accessTokenStateQuery.isError) {
     content = (
       <div className="mx-auto max-w-xl space-y-3 py-10">
         <ErrorBar
           error={{ kind: 'unknown', message: '无法读取访问令牌状态，请稍后重试' }}
-          action={{ label: '重试', onClick: () => void tokenStateQuery.refetch() }}
+          action={{ label: '重试', onClick: () => void accessTokenStateQuery.refetch() }}
         />
       </div>
     );
   } else if (activeView === 'settings') {
     // 未配置访问令牌时 activeView 恒为设置页（启动闸门）
-    content = <SettingsPage onSaved={handleTokenSaved} onGoWatchlist={() => setView('watchlist')} />;
+    content = <SettingsPage onSaved={handleAccessTokenSaved} onGoWatchlist={() => setView('watchlist')} />;
   } else if (activeView === 'detail') {
     content = selected ? (
       <DetailPage
@@ -125,7 +125,7 @@ export function App() {
               title={selected === null ? '先在清单中选择一个监控仓库' : undefined}
               className={navButtonClass(activeView === 'detail', !configured || selected === null)}
             >
-              仓库详情
+              全量信息
             </button>
             <button
               type="button"

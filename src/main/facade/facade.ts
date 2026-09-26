@@ -1,7 +1,7 @@
 import type Database from 'better-sqlite3';
 import type { Clock } from '../core/clock';
 import type { GitHubPort } from '../core/github/port';
-import type { SecretBox } from '../core/secrets/secret-box';
+import type { CipherBox } from '../core/cipher/cipher-box';
 import { silentLogger, type Logger } from '../core/logging/logger';
 import type {
   AddRepositoryResult,
@@ -11,13 +11,11 @@ import type {
   OctoFacade,
   RefreshGlanceResult,
   SettingsView,
-  TokenResult,
-  TokenState,
+  AccessTokenResult,
+  AccessTokenState,
 } from '../../shared/types';
 import { normalizeError } from './errors';
 import {
-  ACCESS_TOKEN_KEY,
-  deleteSetting,
   readAccessToken,
   readPreferences,
   writeAccessToken,
@@ -36,25 +34,28 @@ import { applyDetailValues, applyGlanceValues, fetchDetailValues, fetchGlanceVal
 export interface FacadeDeps {
   db: Database.Database;
   github: GitHubPort;
-  secrets: SecretBox;
+  cipher: CipherBox;
   clock: Clock;
   logger?: Logger;
 }
 
+/** 轻量抓取的并发波次大小（冷启动就绪时间预算见 M3 验收）。 */
+const GLANCE_CONCURRENCY = 5;
+
 /**
- * 用例门面：渲染层唯一入口。清单增删与列举、轻量/全量抓取、令牌校验保存、设置读写。
+ * 用例门面：渲染层唯一入口。清单增删与列举、轻量/全量抓取、访问令牌校验保存、设置读写。
  * 一切行为都在这里对外可见，测试只测这个边界。
  */
 export function createFacade(deps: FacadeDeps): OctoFacade {
   const logger = deps.logger ?? silentLogger;
-  const { db, github, secrets, clock } = deps;
+  const { db, github, cipher, clock } = deps;
 
-  async function validateToken(token: string): Promise<TokenResult> {
+  async function validateAccessToken(accessToken: string): Promise<AccessTokenResult> {
     try {
-      await github.validateToken(token);
+      await github.validateAccessToken(accessToken);
       return { ok: true, error: null };
     } catch (error) {
-      logger.error('令牌校验失败', error);
+      logger.error('访问令牌校验失败', error);
       return { ok: false, error: normalizeError(error) };
     }
   }
@@ -62,24 +63,37 @@ export function createFacade(deps: FacadeDeps): OctoFacade {
   function settingsView(): SettingsView {
     return {
       preferences: readPreferences(db),
-      tokenConfigured: readAccessToken(db, secrets) !== null,
+      accessTokenConfigured: readAccessToken(db, cipher) !== null,
     };
   }
 
+  /** 抓取前置条件：读出访问令牌，未配置则给出统一错误。 */
+  function accessTokenOrFail(fullName?: string): { accessToken: string; error: null } | { accessToken: null; error: NormalizedError } {
+    const accessToken = readAccessToken(db, cipher);
+    if (accessToken === null) {
+      return {
+        accessToken: null,
+        error: {
+          kind: 'access_token_invalid',
+          message: '请先在设置页配置访问令牌',
+          ...(fullName === undefined ? {} : { fullName }),
+        },
+      };
+    }
+    return { accessToken, error: null };
+  }
+
   return {
-    tokenState(): Promise<TokenState> {
-      return Promise.resolve({ configured: readAccessToken(db, secrets) !== null });
+    accessTokenState(): Promise<AccessTokenState> {
+      return Promise.resolve({ configured: readAccessToken(db, cipher) !== null });
     },
-    validateToken,
-    async saveToken(token: string): Promise<TokenResult> {
-      const result = await validateToken(token);
+    validateAccessToken,
+    async saveAccessToken(accessToken: string): Promise<AccessTokenResult> {
+      const result = await validateAccessToken(accessToken);
       if (!result.ok) return result;
-      writeAccessToken(db, secrets, token);
+      // 校验通过才落库（密文），重复保存即覆盖旧令牌
+      writeAccessToken(db, cipher, accessToken);
       return { ok: true, error: null };
-    },
-    clearToken(): Promise<void> {
-      deleteSetting(db, ACCESS_TOKEN_KEY);
-      return Promise.resolve();
     },
     getSettings(): Promise<SettingsView> {
       return Promise.resolve(settingsView());
@@ -93,7 +107,7 @@ export function createFacade(deps: FacadeDeps): OctoFacade {
     },
     async addRepository(input: string): Promise<AddRepositoryResult> {
       const fullName = input.trim();
-      const fail = (kind: 'token_invalid' | 'not_found' | 'unknown', message: string): AddRepositoryResult => ({
+      const fail = (kind: 'access_token_invalid' | 'not_found' | 'unknown', message: string): AddRepositoryResult => ({
         ok: false,
         repository: null,
         error: { kind, message, fullName },
@@ -105,14 +119,12 @@ export function createFacade(deps: FacadeDeps): OctoFacade {
       if (findRepositoryByFullName(db, fullName)) {
         return fail('unknown', '该仓库已在监控清单中');
       }
-      const token = readAccessToken(db, secrets);
-      if (token === null) {
-        return fail('token_invalid', '请先在设置页配置访问令牌');
-      }
+      const auth = accessTokenOrFail(fullName);
+      if (auth.error) return { ok: false, repository: null, error: auth.error };
 
       try {
         // 先抓取验证（不存在/无权限/断网都不入列），成功才落库
-        const values = await fetchGlanceValues(github, token, fullName);
+        const values = await fetchGlanceValues(github, auth.accessToken, fullName);
         const [owner = '', name = ''] = fullName.split('/');
         const row = insertRepositoryRow(db, owner, name, clock.now().toISOString());
         const glance = applyGlanceValues(db, clock, row.id, values);
@@ -129,26 +141,36 @@ export function createFacade(deps: FacadeDeps): OctoFacade {
     async refreshGlance(): Promise<RefreshGlanceResult> {
       const rows = listRepositoryRows(db);
       const errors: NormalizedError[] = [];
-      const token = readAccessToken(db, secrets);
-      if (token === null) {
-        return {
-          repositories: rows.map(rowToGlance),
-          errors: [{ kind: 'token_invalid', message: '请先在设置页配置访问令牌' }],
-        };
+      const auth = accessTokenOrFail();
+      if (auth.error) {
+        return { repositories: rows.map(rowToGlance), errors: [auth.error] };
       }
 
       let aborted = false;
-      for (const row of rows) {
-        if (aborted) break;
-        try {
-          const values = await fetchGlanceValues(github, token, row.full_name);
-          applyGlanceValues(db, clock, row.id, values);
-        } catch (error) {
-          const normalized = normalizeError(error, row.full_name);
-          logger.error(`轻量信息抓取失败：${row.full_name}`, error);
-          errors.push(normalized);
-          // 令牌失效与限流会影响整个批次：中止余下抓取，避免连环报错
-          if (normalized.kind === 'token_invalid' || normalized.kind === 'rate_limited') aborted = true;
+      // 分波并发抓取（每仓库两次调用），兼顾冷启动就绪时间与限流中止语义
+      for (let start = 0; start < rows.length && !aborted; start += GLANCE_CONCURRENCY) {
+        const wave = rows.slice(start, start + GLANCE_CONCURRENCY);
+        const waveErrors = await Promise.all(
+          wave.map(async (row): Promise<NormalizedError | null> => {
+            try {
+              const values = await fetchGlanceValues(github, auth.accessToken, row.full_name);
+              applyGlanceValues(db, clock, row.id, values);
+              return null;
+            } catch (error) {
+              logger.error(`轻量信息抓取失败：${row.full_name}`, error);
+              return normalizeError(error, row.full_name);
+            }
+          }),
+        );
+        for (const error of waveErrors) {
+          if (!error) continue;
+          // 令牌失效与限流影响整个批次：只报一次并停止发起余下抓取
+          const batchWide = error.kind === 'access_token_invalid' || error.kind === 'rate_limited';
+          if (batchWide) {
+            aborted = true;
+            if (errors.some((e) => e.kind === error.kind)) continue;
+          }
+          errors.push(error);
         }
       }
       return { repositories: listRepositoryRows(db).map(rowToGlance), errors };
@@ -158,15 +180,12 @@ export function createFacade(deps: FacadeDeps): OctoFacade {
       if (!row) {
         return { detail: null, error: { kind: 'not_found', message: '监控仓库不存在' } };
       }
-      const token = readAccessToken(db, secrets);
-      if (token === null) {
-        return {
-          detail: null,
-          error: { kind: 'token_invalid', message: '请先在设置页配置访问令牌', fullName: row.full_name },
-        };
-      }
+      const auth = accessTokenOrFail(row.full_name);
+      if (auth.error) return { detail: null, error: auth.error };
       try {
-        const values = await fetchDetailValues(github, token, row.full_name);
+        // 抓取失败时 detail 为 null：全量信息不落库（spec 数据表只存轻量展示字段与快照），
+        // "显示上次数据"由渲染层在会话内保留，错误条照常展示
+        const values = await fetchDetailValues(github, auth.accessToken, row.full_name);
         return { detail: applyDetailValues(db, clock, repositoryId, values), error: null };
       } catch (error) {
         logger.error(`全量信息抓取失败：${row.full_name}`, error);

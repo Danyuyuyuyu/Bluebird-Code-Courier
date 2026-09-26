@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3';
-import type { SecretBox } from '../core/secrets/secret-box';
+import type { CipherBox } from '../core/cipher/cipher-box';
 
 /** setting 表：访问令牌（密文）与偏好项的键名约定。 */
 export const ACCESS_TOKEN_KEY = 'access_token';
@@ -24,18 +24,18 @@ export function deleteSetting(db: Database.Database, key: string): void {
 }
 
 /** 读取访问令牌明文；未配置或密文损坏时返回 null。 */
-export function readAccessToken(db: Database.Database, secrets: SecretBox): string | null {
+export function readAccessToken(db: Database.Database, cipher: CipherBox): string | null {
   const raw = readRawSetting(db, ACCESS_TOKEN_KEY);
   if (raw === null) return null;
   try {
-    return secrets.decrypt(raw);
+    return cipher.decrypt(raw);
   } catch {
     return null;
   }
 }
 
-export function writeAccessToken(db: Database.Database, secrets: SecretBox, token: string): void {
-  writeSetting(db, ACCESS_TOKEN_KEY, secrets.encrypt(token));
+export function writeAccessToken(db: Database.Database, cipher: CipherBox, accessToken: string): void {
+  writeSetting(db, ACCESS_TOKEN_KEY, cipher.encrypt(accessToken));
 }
 
 export function readPreferences(db: Database.Database): Record<string, string> {

@@ -39,13 +39,13 @@ export interface BuildRun {
  * 其余意外错误原样抛出，由错误归一映射为"未知"。
  */
 export interface GitHubPort {
-  validateToken(token: string): Promise<void>;
-  getRepositoryMeta(token: string, fullName: string): Promise<RepoMeta>;
-  getLatestRelease(token: string, fullName: string): Promise<ReleaseItem | null>;
-  listReleases(token: string, fullName: string): Promise<ReleaseItem[]>;
-  listCommits(token: string, fullName: string): Promise<CommitItem[]>;
-  listIssues(token: string, fullName: string): Promise<IssueOrPullRequest[]>;
-  getLatestBuild(token: string, fullName: string): Promise<BuildRun | null>;
+  validateAccessToken(accessToken: string): Promise<void>;
+  getRepositoryMeta(accessToken: string, fullName: string): Promise<RepoMeta>;
+  getLatestRelease(accessToken: string, fullName: string): Promise<ReleaseItem | null>;
+  listReleases(accessToken: string, fullName: string): Promise<ReleaseItem[]>;
+  listCommits(accessToken: string, fullName: string): Promise<CommitItem[]>;
+  listIssues(accessToken: string, fullName: string): Promise<IssueOrPullRequest[]>;
+  getLatestBuild(accessToken: string, fullName: string): Promise<BuildRun | null>;
 }
 
 export class GitHubRequestError extends Error {

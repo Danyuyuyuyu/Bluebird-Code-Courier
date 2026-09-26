@@ -55,7 +55,7 @@ describe('数据库建表与迁移', () => {
     expect(tableNames(db)).toEqual(expect.arrayContaining(['repository', 'snapshot', 'setting']));
   });
 
-  it('对缺表的旧库补齐新表（升级迁移）', () => {
+  it('对缺表的旧库补齐新表与缺失列（升级迁移）', () => {
     const pathname = tempDbPath();
     const legacy = new Database(pathname);
     legacy.exec('CREATE TABLE repository (id INTEGER PRIMARY KEY AUTOINCREMENT, full_name TEXT NOT NULL UNIQUE)');
@@ -63,5 +63,21 @@ describe('数据库建表与迁移', () => {
 
     const db = open(pathname);
     expect(tableNames(db)).toEqual(expect.arrayContaining(['repository', 'snapshot', 'setting']));
+
+    const columns = (db.pragma('table_info(repository)') as Array<{ name: string }>).map((c) => c.name);
+    expect(columns).toEqual(
+      expect.arrayContaining([
+        'owner',
+        'name',
+        'full_name',
+        'added_at',
+        'stars',
+        'forks',
+        'open_issues',
+        'pushed_at',
+        'latest_release_tag',
+        'fetched_at',
+      ]),
+    );
   });
 });

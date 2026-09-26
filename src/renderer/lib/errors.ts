@@ -4,7 +4,7 @@ import { formatClock } from './time';
 /** 错误类别 → 面向用户的展示文案。 */
 export function describeError(error: NormalizedError): string {
   switch (error.kind) {
-    case 'token_invalid':
+    case 'access_token_invalid':
       return '令牌无效，请检查后重试';
     case 'rate_limited':
       return error.resetAt

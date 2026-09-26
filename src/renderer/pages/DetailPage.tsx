@@ -14,6 +14,7 @@ import { getApi } from '../lib/api';
 import { formatDate, formatRelativeTime, isWithinDays } from '../lib/time';
 import { ErrorBar } from '../components/ErrorBar';
 import { GlanceFact } from '../components/GlanceFact';
+import { Loading } from '../components/Loading';
 import { Section } from '../components/Section';
 import { Spinner } from '../components/Spinner';
 import { TrendChart } from '../components/TrendChart';
@@ -231,10 +232,7 @@ export function DetailPage({ repositoryId, fullName, onBack, onGoSettings }: Det
       ) : null}
 
       {detailQuery.isPending && !detail ? (
-        <div className="flex items-center justify-center gap-2 rounded-lg border border-slate-800 bg-slate-900 px-6 py-10 text-sm text-slate-400">
-          <Spinner />
-          正在抓取全量信息…
-        </div>
+        <Loading label="正在抓取全量信息…" />
       ) : detail ? (
         <div className={`space-y-4 transition-opacity ${detailQuery.isFetching ? 'opacity-60' : ''}`}>
           <Section title="发版">

@@ -16,7 +16,7 @@ afterEach(() => {
 
 async function ready(): Promise<Harness> {
   harness = createHarness();
-  await h().facade.saveToken('ghp_valid_token');
+  await h().facade.saveAccessToken('ghp_valid_token');
   return h();
 }
 
@@ -127,6 +127,6 @@ describe('监控清单', () => {
     const listed = await reopened.facade.listRepositories();
     expect(listed).toHaveLength(1);
     expect(listed[0]).toMatchObject({ fullName: 'octo-demo/hello-world', stars: 1284 });
-    expect(await reopened.facade.tokenState()).toEqual({ configured: true });
+    expect(await reopened.facade.accessTokenState()).toEqual({ configured: true });
   });
 });

@@ -2,7 +2,7 @@ import type { NormalizedError } from '../../shared/types';
 import { describeError } from '../lib/errors';
 
 const KIND_STYLES: Record<NormalizedError['kind'], string> = {
-  token_invalid: 'border-red-500/40 bg-red-500/10 text-red-200',
+  access_token_invalid: 'border-red-500/40 bg-red-500/10 text-red-200',
   rate_limited: 'border-amber-500/40 bg-amber-500/10 text-amber-200',
   not_found: 'border-sky-500/40 bg-sky-500/10 text-sky-200',
   network: 'border-orange-500/40 bg-orange-500/10 text-orange-200',
@@ -37,7 +37,7 @@ export function ErrorBar({ error, onGoSettings, action }: ErrorBarProps) {
           {action.label}
         </button>
       ) : null}
-      {error.kind === 'token_invalid' && onGoSettings ? (
+      {error.kind === 'access_token_invalid' && onGoSettings ? (
         <button
           type="button"
           onClick={onGoSettings}

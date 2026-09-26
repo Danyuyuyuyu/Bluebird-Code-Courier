@@ -16,7 +16,7 @@ afterEach(() => {
 
 async function readyWithRepos(fullNames: string[]): Promise<Harness> {
   harness = createHarness();
-  await h().facade.saveToken('ghp_valid_token');
+  await h().facade.saveAccessToken('ghp_valid_token');
   for (const fullName of fullNames) {
     h().github.addRepo(makeRepoData({ meta: { ...makeRepoData().meta, fullName } }));
     await h().facade.addRepository(fullName);
@@ -75,12 +75,12 @@ describe('轻量信息抓取（清单页）', () => {
 
   it('令牌失效（401）：只报一次令牌无效并引导设置', async () => {
     await readyWithRepos(['octo-demo/hello-world', 'octo-demo/second-repo']);
-    h().github.tokenInvalid = true;
+    h().github.accessTokenInvalid = true;
 
     const result = await h().facade.refreshGlance();
 
     expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toMatchObject({ kind: 'token_invalid' });
+    expect(result.errors[0]).toMatchObject({ kind: 'access_token_invalid' });
     expect(result.repositories).toHaveLength(2);
   });
 
@@ -99,7 +99,7 @@ describe('轻量信息抓取（清单页）', () => {
 
   it('没有监控仓库时返回空清单且无错误', async () => {
     harness = createHarness();
-    await h().facade.saveToken('ghp_valid_token');
+    await h().facade.saveAccessToken('ghp_valid_token');
 
     const result = await h().facade.refreshGlance();
     expect(result).toEqual({ repositories: [], errors: [] });
@@ -109,6 +109,6 @@ describe('轻量信息抓取（清单页）', () => {
     harness = createHarness();
     const result = await h().facade.refreshGlance();
     expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toMatchObject({ kind: 'token_invalid' });
+    expect(result.errors[0]).toMatchObject({ kind: 'access_token_invalid' });
   });
 });

@@ -4,10 +4,9 @@ import type { OctoBridge } from '../shared/types';
 
 /** 白名单网关：仅暴露用例门面的固定方法，不透传任意通道。 */
 const bridge: OctoBridge = {
-  tokenState: () => ipcRenderer.invoke(IPC_CHANNELS.tokenState),
-  validateToken: (token) => ipcRenderer.invoke(IPC_CHANNELS.validateToken, token),
-  saveToken: (token) => ipcRenderer.invoke(IPC_CHANNELS.saveToken, token),
-  clearToken: () => ipcRenderer.invoke(IPC_CHANNELS.clearToken),
+  accessTokenState: () => ipcRenderer.invoke(IPC_CHANNELS.accessTokenState),
+  validateAccessToken: (accessToken) => ipcRenderer.invoke(IPC_CHANNELS.validateAccessToken, accessToken),
+  saveAccessToken: (accessToken) => ipcRenderer.invoke(IPC_CHANNELS.saveAccessToken, accessToken),
   getSettings: () => ipcRenderer.invoke(IPC_CHANNELS.getSettings),
   updateSettings: (patch) => ipcRenderer.invoke(IPC_CHANNELS.updateSettings, patch),
   listRepositories: () => ipcRenderer.invoke(IPC_CHANNELS.listRepositories),

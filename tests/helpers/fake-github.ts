@@ -12,7 +12,7 @@ export interface FakeRepoData {
   build: BuildRun | null;
 }
 
-export type FakeMethod = 'validateToken' | keyof Omit<GitHubPort, 'validateToken'>;
+export type FakeMethod = 'validateAccessToken' | keyof Omit<GitHubPort, 'validateAccessToken'>;
 
 /** 按 spec 的错误与降级场景构造的适配器错误。 */
 export const fixtures = {
@@ -25,6 +25,14 @@ export const fixtures = {
       'x-ratelimit-reset': String(Math.floor(resetAt.getTime() / 1000)),
     };
     return new GitHubRequestError(403, headers, 'API rate limit exceeded');
+  },
+  /** 限流但响应不带恢复时间头。 */
+  rateLimitedNoReset(): GitHubRequestError {
+    return new GitHubRequestError(403, { 'x-ratelimit-remaining': '0' }, 'API rate limit exceeded');
+  },
+  /** 429 限流（无任何配额头）。 */
+  tooManyRequests(): GitHubRequestError {
+    return new GitHubRequestError(429, {}, 'Too Many Requests');
   },
   notFound(): GitHubRequestError {
     return new GitHubRequestError(404, {}, 'Not Found');
@@ -89,9 +97,9 @@ export function makeRepoData(overrides: Partial<FakeRepoData> = {}): FakeRepoDat
  * 并可按仓库 + 方法注入限流 / 401 / 404 / 网络失败场景。
  */
 export class FakeGitHub implements GitHubPort {
-  validToken = 'ghp_valid_token';
+  validAccessToken = 'ghp_valid_token';
   /** 抓取过程中令牌失效（401）。 */
-  tokenInvalid = false;
+  accessTokenInvalid = false;
   /** 全局断网。 */
   networkDown = false;
   repos = new Map<string, FakeRepoData>();
@@ -113,7 +121,7 @@ export class FakeGitHub implements GitHubPort {
     const scoped = this.failures.get(fullName)?.[method] ?? this.failures.get('*')?.[method];
     if (scoped) throw scoped;
     if (this.networkDown) throw fixtures.networkError();
-    if (this.tokenInvalid) throw fixtures.unauthorized();
+    if (this.accessTokenInvalid) throw fixtures.unauthorized();
   }
 
   private repo(fullName: string): FakeRepoData {
@@ -122,37 +130,37 @@ export class FakeGitHub implements GitHubPort {
     return data;
   }
 
-  async validateToken(token: string): Promise<void> {
-    this.guard('*', 'validateToken');
-    if (token !== this.validToken) throw fixtures.unauthorized();
+  async validateAccessToken(accessToken: string): Promise<void> {
+    this.guard('*', 'validateAccessToken');
+    if (accessToken !== this.validAccessToken) throw fixtures.unauthorized();
   }
 
-  async getRepositoryMeta(_token: string, fullName: string): Promise<RepoMeta> {
+  async getRepositoryMeta(_accessToken: string, fullName: string): Promise<RepoMeta> {
     this.guard(fullName, 'getRepositoryMeta');
     return this.repo(fullName).meta;
   }
 
-  async getLatestRelease(_token: string, fullName: string): Promise<ReleaseItem | null> {
+  async getLatestRelease(_accessToken: string, fullName: string): Promise<ReleaseItem | null> {
     this.guard(fullName, 'getLatestRelease');
     return this.repo(fullName).latestRelease;
   }
 
-  async listReleases(_token: string, fullName: string): Promise<ReleaseItem[]> {
+  async listReleases(_accessToken: string, fullName: string): Promise<ReleaseItem[]> {
     this.guard(fullName, 'listReleases');
     return this.repo(fullName).releases;
   }
 
-  async listCommits(_token: string, fullName: string): Promise<CommitItem[]> {
+  async listCommits(_accessToken: string, fullName: string): Promise<CommitItem[]> {
     this.guard(fullName, 'listCommits');
     return this.repo(fullName).commits;
   }
 
-  async listIssues(_token: string, fullName: string): Promise<IssueOrPullRequest[]> {
+  async listIssues(_accessToken: string, fullName: string): Promise<IssueOrPullRequest[]> {
     this.guard(fullName, 'listIssues');
     return this.repo(fullName).issuesAndPullRequests;
   }
 
-  async getLatestBuild(_token: string, fullName: string): Promise<BuildRun | null> {
+  async getLatestBuild(_accessToken: string, fullName: string): Promise<BuildRun | null> {
     this.guard(fullName, 'getLatestBuild');
     return this.repo(fullName).build;
   }

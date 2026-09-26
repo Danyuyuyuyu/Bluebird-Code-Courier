@@ -53,16 +53,24 @@ interface RawWorkflowRun {
   run_started_at?: string | null;
 }
 
+function toReleaseItem(release: RawRelease): ReleaseItem {
+  return {
+    tagName: release.tag_name,
+    title: release.name ?? release.tag_name,
+    publishedAt: release.published_at,
+  };
+}
+
 /**
  * GitHub REST 适配器（生产实现）。
  * 请求一律带访问令牌与固定 API 版本号；HTTP 错误抛 GitHubRequestError，
  * 网络层失败原样抛 TypeError（错误归一映射为"网络失败"）。
  */
 export function createHttpGitHub(fetchImpl: typeof fetch = fetch): GitHubPort {
-  async function request<T>(token: string, path: string, map: (json: unknown) => T): Promise<T> {
+  async function request<T>(accessToken: string, path: string, map: (json: unknown) => T): Promise<T> {
     const response = await fetchImpl(`${API_BASE}${path}`, {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${accessToken}`,
         Accept: 'application/vnd.github+json',
         'X-GitHub-Api-Version': API_VERSION,
         'User-Agent': USER_AGENT,
@@ -79,12 +87,12 @@ export function createHttpGitHub(fetchImpl: typeof fetch = fetch): GitHubPort {
   }
 
   return {
-    validateToken(token: string): Promise<void> {
-      return request(token, '/user', () => undefined);
+    validateAccessToken(accessToken: string): Promise<void> {
+      return request(accessToken, '/user', () => undefined);
     },
 
-    getRepositoryMeta(token: string, fullName: string): Promise<RepoMeta> {
-      return request(token, `/repos/${fullName}`, (json) => {
+    getRepositoryMeta(accessToken: string, fullName: string): Promise<RepoMeta> {
+      return request(accessToken, `/repos/${fullName}`, (json) => {
         const repo = json as RawRepo;
         return {
           fullName: repo.full_name,
@@ -96,16 +104,11 @@ export function createHttpGitHub(fetchImpl: typeof fetch = fetch): GitHubPort {
       });
     },
 
-    async getLatestRelease(token: string, fullName: string): Promise<ReleaseItem | null> {
+    async getLatestRelease(accessToken: string, fullName: string): Promise<ReleaseItem | null> {
       try {
-        return await request(token, `/repos/${fullName}/releases/latest`, (json) => {
-          const release = json as RawRelease;
-          return {
-            tagName: release.tag_name,
-            title: release.name ?? release.tag_name,
-            publishedAt: release.published_at,
-          };
-        });
+        return await request(accessToken, `/repos/${fullName}/releases/latest`, (json) =>
+          toReleaseItem(json as RawRelease),
+        );
       } catch (error) {
         // 无发版的仓库该端点返回 404 —— 缺省值记空，不视为错误
         if (error instanceof GitHubRequestError && error.status === 404) return null;
@@ -113,18 +116,14 @@ export function createHttpGitHub(fetchImpl: typeof fetch = fetch): GitHubPort {
       }
     },
 
-    listReleases(token: string, fullName: string): Promise<ReleaseItem[]> {
-      return request(token, `/repos/${fullName}/releases?per_page=30`, (json) =>
-        (json as RawRelease[]).map((release) => ({
-          tagName: release.tag_name,
-          title: release.name ?? release.tag_name,
-          publishedAt: release.published_at,
-        })),
+    listReleases(accessToken: string, fullName: string): Promise<ReleaseItem[]> {
+      return request(accessToken, `/repos/${fullName}/releases?per_page=30`, (json) =>
+        (json as RawRelease[]).map(toReleaseItem),
       );
     },
 
-    listCommits(token: string, fullName: string): Promise<CommitItem[]> {
-      return request(token, `/repos/${fullName}/commits?per_page=30`, (json) =>
+    listCommits(accessToken: string, fullName: string): Promise<CommitItem[]> {
+      return request(accessToken, `/repos/${fullName}/commits?per_page=30`, (json) =>
         (json as RawCommit[]).map((commit) => ({
           sha: commit.sha,
           message: commit.commit.message.split('\n')[0] ?? '',
@@ -134,9 +133,9 @@ export function createHttpGitHub(fetchImpl: typeof fetch = fetch): GitHubPort {
       );
     },
 
-    listIssues(token: string, fullName: string): Promise<IssueOrPullRequest[]> {
+    listIssues(accessToken: string, fullName: string): Promise<IssueOrPullRequest[]> {
       // 同一端点返回议题与合并请求，按是否带 pull_request 标记拆分
-      return request(token, `/repos/${fullName}/issues?state=all&per_page=50`, (json) =>
+      return request(accessToken, `/repos/${fullName}/issues?state=all&per_page=50`, (json) =>
         (json as RawIssue[]).map((issue) => ({
           number: issue.number,
           title: issue.title,
@@ -148,8 +147,8 @@ export function createHttpGitHub(fetchImpl: typeof fetch = fetch): GitHubPort {
       );
     },
 
-    async getLatestBuild(token: string, fullName: string): Promise<BuildRun | null> {
-      const run = await request(token, `/repos/${fullName}/actions/runs?per_page=1`, (json) => {
+    async getLatestBuild(accessToken: string, fullName: string): Promise<BuildRun | null> {
+      const run = await request(accessToken, `/repos/${fullName}/actions/runs?per_page=1`, (json) => {
         const runs = (json as { workflow_runs: RawWorkflowRun[] }).workflow_runs;
         return runs[0] ?? null;
       });

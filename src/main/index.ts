@@ -1,7 +1,7 @@
 import { app, BrowserWindow, safeStorage } from 'electron';
 import path from 'node:path';
 import { openDatabase } from './core/db/database';
-import { createSafeStorageSecretBox } from './core/secrets/secret-box';
+import { createSafeStorageCipherBox } from './core/cipher/cipher-box';
 import { createFileLogger } from './core/logging/logger';
 import { systemClock } from './core/clock';
 import { createHttpGitHub } from './core/github/http-github';
@@ -44,7 +44,7 @@ void app.whenReady().then(() => {
   const facade = createFacade({
     db,
     github: createHttpGitHub(),
-    secrets: createSafeStorageSecretBox(safeStorage),
+    cipher: createSafeStorageCipherBox(safeStorage),
     clock: systemClock,
     logger,
   });

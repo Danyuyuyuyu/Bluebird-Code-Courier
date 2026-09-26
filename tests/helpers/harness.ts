@@ -6,12 +6,12 @@ import { openDatabase } from '../../src/main/core/db/database';
 import { createFacade } from '../../src/main/facade/facade';
 import type { OctoFacade } from '../../src/shared/types';
 import { FakeGitHub } from './fake-github';
-import { FakeClock, FakeSecretBox } from './fakes';
+import { FakeClock, FakeCipherBox } from './fakes';
 
 export interface Harness {
   db: Database.Database;
   github: FakeGitHub;
-  secrets: FakeSecretBox;
+  cipher: FakeCipherBox;
   clock: FakeClock;
   facade: OctoFacade;
   /** 关闭并重新打开同一个数据库文件（模拟应用重启）。 */
@@ -27,18 +27,18 @@ export function createHarness(options: { now?: Date } = {}): Harness {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-facade-'));
   const dbPath = path.join(dir, 'octo.db');
   const github = new FakeGitHub();
-  const secrets = new FakeSecretBox();
+  const cipher = new FakeCipherBox();
   const clock = new FakeClock(options.now ?? new Date(2026, 8, 26, 12, 0, 0));
 
   let db = openDatabase(dbPath);
-  let facade = createFacade({ db, github, secrets, clock });
+  let facade = createFacade({ db, github, cipher, clock });
 
   const harness: Harness = {
     get db() {
       return db;
     },
     github,
-    secrets,
+    cipher,
     clock,
     get facade() {
       return facade;
@@ -46,7 +46,7 @@ export function createHarness(options: { now?: Date } = {}): Harness {
     reopen(): Harness {
       db.close();
       db = openDatabase(dbPath);
-      facade = createFacade({ db, github, secrets, clock });
+      facade = createFacade({ db, github, cipher, clock });
       return harness;
     },
     destroy(): void {

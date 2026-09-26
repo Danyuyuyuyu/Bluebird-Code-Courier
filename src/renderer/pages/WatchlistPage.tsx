@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Glance, NormalizedError } from '../../shared/types';
@@ -6,8 +6,12 @@ import { getApi } from '../lib/api';
 import { dedupeErrors } from '../lib/errors';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorBar } from '../components/ErrorBar';
+import { Loading } from '../components/Loading';
 import { RepoRow } from '../components/RepoRow';
 import { Spinner } from '../components/Spinner';
+
+/** 启动时自动抓取一次轻量信息（整个会话一次；重新抓取走"重新抓取"按钮）。 */
+let startupRefreshed = false;
 
 interface WatchlistPageProps {
   onOpenDetail: (repo: Glance) => void;
@@ -27,7 +31,6 @@ export function WatchlistPage({ onOpenDetail, onGoSettings }: WatchlistPageProps
   const [refreshing, setRefreshing] = useState(false);
   const [refreshErrors, setRefreshErrors] = useState<NormalizedError[]>([]);
   const [removingId, setRemovingId] = useState<number | null>(null);
-  const startedRef = useRef(false);
 
   // 重新抓取轻量信息；完成后刷新清单查询
   async function runRefresh(): Promise<void> {
@@ -45,8 +48,8 @@ export function WatchlistPage({ onOpenDetail, onGoSettings }: WatchlistPageProps
 
   // 启动后自动抓取一次
   useEffect(() => {
-    if (startedRef.current) return;
-    startedRef.current = true;
+    if (startupRefreshed) return;
+    startupRefreshed = true;
     void runRefresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -137,10 +140,7 @@ export function WatchlistPage({ onOpenDetail, onGoSettings }: WatchlistPageProps
       ) : null}
 
       {listQuery.isPending && !listQuery.data ? (
-        <div className="flex items-center justify-center gap-2 rounded-lg border border-slate-800 bg-slate-900 px-6 py-10 text-sm text-slate-400">
-          <Spinner />
-          正在加载监控清单…
-        </div>
+        <Loading label="正在加载监控清单…" />
       ) : repositories.length === 0 ? (
         <EmptyState title="还没有监控仓库，输入 owner/repo 开始跟踪" />
       ) : (
