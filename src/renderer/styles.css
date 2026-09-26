@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-slate-950 text-slate-200 antialiased;
+}
+
+/* 输入框与按钮的统一聚焦轮廓 */
+*:focus-visible {
+  outline: 2px solid rgb(52 211 153 / 0.6);
+  outline-offset: 1px;
+}

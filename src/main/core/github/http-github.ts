@@ -1,0 +1,166 @@
+import type { CommitItem, ReleaseItem } from '../../../shared/types';
+import {
+  GitHubRequestError,
+  type BuildRun,
+  type GitHubPort,
+  type IssueOrPullRequest,
+  type RepoMeta,
+} from './port';
+
+const API_BASE = 'https://api.github.com';
+const API_VERSION = '2022-11-28';
+const USER_AGENT = 'octo-monitor';
+
+/** GitHub REST 的原始应答（只声明用到的字段）。 */
+interface RawRepo {
+  full_name: string;
+  stargazers_count: number;
+  forks_count: number;
+  open_issues_count: number;
+  pushed_at: string | null;
+}
+
+interface RawRelease {
+  tag_name: string;
+  name: string | null;
+  published_at: string | null;
+}
+
+interface RawCommit {
+  sha: string;
+  commit: {
+    message: string;
+    author: { name: string | null; date: string | null } | null;
+    committer: { name: string | null; date: string | null } | null;
+  };
+}
+
+interface RawIssue {
+  number: number;
+  title: string;
+  state: string;
+  user: { login: string } | null;
+  updated_at: string;
+  pull_request?: unknown;
+}
+
+interface RawWorkflowRun {
+  name: string | null;
+  status: string | null;
+  conclusion: string | null;
+  html_url: string | null;
+  updated_at: string | null;
+  run_started_at?: string | null;
+}
+
+/**
+ * GitHub REST 适配器（生产实现）。
+ * 请求一律带访问令牌与固定 API 版本号；HTTP 错误抛 GitHubRequestError，
+ * 网络层失败原样抛 TypeError（错误归一映射为"网络失败"）。
+ */
+export function createHttpGitHub(fetchImpl: typeof fetch = fetch): GitHubPort {
+  async function request<T>(token: string, path: string, map: (json: unknown) => T): Promise<T> {
+    const response = await fetchImpl(`${API_BASE}${path}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': API_VERSION,
+        'User-Agent': USER_AGENT,
+      },
+    });
+    if (!response.ok) {
+      const headers: Record<string, string> = {};
+      response.headers.forEach((value, key) => {
+        headers[key] = value;
+      });
+      throw new GitHubRequestError(response.status, headers);
+    }
+    return map(await response.json());
+  }
+
+  return {
+    validateToken(token: string): Promise<void> {
+      return request(token, '/user', () => undefined);
+    },
+
+    getRepositoryMeta(token: string, fullName: string): Promise<RepoMeta> {
+      return request(token, `/repos/${fullName}`, (json) => {
+        const repo = json as RawRepo;
+        return {
+          fullName: repo.full_name,
+          stars: repo.stargazers_count,
+          forks: repo.forks_count,
+          openIssues: repo.open_issues_count,
+          pushedAt: repo.pushed_at,
+        };
+      });
+    },
+
+    async getLatestRelease(token: string, fullName: string): Promise<ReleaseItem | null> {
+      try {
+        return await request(token, `/repos/${fullName}/releases/latest`, (json) => {
+          const release = json as RawRelease;
+          return {
+            tagName: release.tag_name,
+            title: release.name ?? release.tag_name,
+            publishedAt: release.published_at,
+          };
+        });
+      } catch (error) {
+        // 无发版的仓库该端点返回 404 —— 缺省值记空，不视为错误
+        if (error instanceof GitHubRequestError && error.status === 404) return null;
+        throw error;
+      }
+    },
+
+    listReleases(token: string, fullName: string): Promise<ReleaseItem[]> {
+      return request(token, `/repos/${fullName}/releases?per_page=30`, (json) =>
+        (json as RawRelease[]).map((release) => ({
+          tagName: release.tag_name,
+          title: release.name ?? release.tag_name,
+          publishedAt: release.published_at,
+        })),
+      );
+    },
+
+    listCommits(token: string, fullName: string): Promise<CommitItem[]> {
+      return request(token, `/repos/${fullName}/commits?per_page=30`, (json) =>
+        (json as RawCommit[]).map((commit) => ({
+          sha: commit.sha,
+          message: commit.commit.message.split('\n')[0] ?? '',
+          authorName: commit.commit.author?.name ?? null,
+          committedAt: commit.commit.author?.date ?? commit.commit.committer?.date ?? '',
+        })),
+      );
+    },
+
+    listIssues(token: string, fullName: string): Promise<IssueOrPullRequest[]> {
+      // 同一端点返回议题与合并请求，按是否带 pull_request 标记拆分
+      return request(token, `/repos/${fullName}/issues?state=all&per_page=50`, (json) =>
+        (json as RawIssue[]).map((issue) => ({
+          number: issue.number,
+          title: issue.title,
+          state: issue.state === 'closed' ? 'closed' : 'open',
+          authorName: issue.user?.login ?? null,
+          updatedAt: issue.updated_at,
+          hasPullRequest: issue.pull_request !== undefined,
+        })),
+      );
+    },
+
+    async getLatestBuild(token: string, fullName: string): Promise<BuildRun | null> {
+      const run = await request(token, `/repos/${fullName}/actions/runs?per_page=1`, (json) => {
+        const runs = (json as { workflow_runs: RawWorkflowRun[] }).workflow_runs;
+        return runs[0] ?? null;
+      });
+      if (run === null) return null; // 没有构建
+      return {
+        workflowName: run.name,
+        status: run.status,
+        conclusion: run.conclusion,
+        url: run.html_url,
+        finishedAt: run.updated_at,
+      };
+    },
+  };
+}

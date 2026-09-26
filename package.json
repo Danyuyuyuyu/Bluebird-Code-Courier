@@ -1,0 +1,42 @@
+{
+  "name": "octo-monitor",
+  "productName": "OCTO 仓库监控器",
+  "version": "0.1.0",
+  "description": "本地优先的 GitHub 仓库监控桌面应用",
+  "private": true,
+  "main": "dist/main/main/index.js",
+  "license": "UNLICENSED",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --require ./tools/compat/no-pipe-spawn.cjs ./node_modules/vitest/vitest.mjs run",
+    "test:watch": "node --require ./tools/compat/no-pipe-spawn.cjs ./node_modules/vitest/vitest.mjs",
+    "build:main": "tsc -p tsconfig.main.json",
+    "build:renderer": "node --require ./tools/compat/no-pipe-spawn.cjs ./node_modules/vite/bin/vite.js build",
+    "build": "npm run build:main && npm run build:renderer",
+    "start": "npm run build && electron .",
+    "dist": "npm run build && electron-builder --win nsis"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.104.0",
+    "better-sqlite3": "^13.0.3",
+    "chart.js": "^4.5.1",
+    "react": "^18.3.1",
+    "react-chartjs-2": "^5.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^26.6.3",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "autoprefixer": "^10.6.1",
+    "electron": "^44.4.5",
+    "electron-builder": "^26.15.3",
+    "postcss": "^8.5.28",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.1",
+    "vitest": "^5.0.2"
+  }
+}

@@ -1,0 +1,98 @@
+import type Database from 'better-sqlite3';
+import type { Glance } from '../../shared/types';
+
+export interface RepositoryRow {
+  id: number;
+  owner: string;
+  name: string;
+  full_name: string;
+  added_at: string;
+  stars: number | null;
+  forks: number | null;
+  open_issues: number | null;
+  pushed_at: string | null;
+  latest_release_tag: string | null;
+  fetched_at: string | null;
+}
+
+export interface GlanceValues {
+  stars: number;
+  forks: number;
+  openIssues: number;
+  pushedAt: string | null;
+  latestReleaseTag: string | null;
+}
+
+export function rowToGlance(row: RepositoryRow): Glance {
+  return {
+    id: row.id,
+    owner: row.owner,
+    name: row.name,
+    fullName: row.full_name,
+    addedAt: row.added_at,
+    stars: row.stars,
+    forks: row.forks,
+    openIssues: row.open_issues,
+    pushedAt: row.pushed_at,
+    latestReleaseTag: row.latest_release_tag,
+    fetchedAt: row.fetched_at,
+  };
+}
+
+export function listRepositoryRows(db: Database.Database): RepositoryRow[] {
+  return db
+    .prepare('SELECT * FROM repository ORDER BY added_at ASC, id ASC')
+    .all() as RepositoryRow[];
+}
+
+export function findRepositoryRow(db: Database.Database, id: number): RepositoryRow | null {
+  const row = db.prepare('SELECT * FROM repository WHERE id = ?').get(id) as RepositoryRow | undefined;
+  return row ?? null;
+}
+
+export function findRepositoryByFullName(db: Database.Database, fullName: string): RepositoryRow | null {
+  const row = db.prepare('SELECT * FROM repository WHERE full_name = ?').get(fullName) as
+    | RepositoryRow
+    | undefined;
+  return row ?? null;
+}
+
+export function insertRepositoryRow(
+  db: Database.Database,
+  owner: string,
+  name: string,
+  addedAt: string,
+): RepositoryRow {
+  const fullName = `${owner}/${name}`;
+  const result = db
+    .prepare('INSERT INTO repository (owner, name, full_name, added_at) VALUES (?, ?, ?, ?)')
+    .run(owner, name, fullName, addedAt);
+  const row = findRepositoryRow(db, Number(result.lastInsertRowid));
+  if (!row) throw new Error(`仓库落库失败：${fullName}`);
+  return row;
+}
+
+export function updateRepositoryGlance(
+  db: Database.Database,
+  repositoryId: number,
+  values: GlanceValues,
+  fetchedAt: string,
+): void {
+  db.prepare(
+    `UPDATE repository
+     SET stars = ?, forks = ?, open_issues = ?, pushed_at = ?, latest_release_tag = ?, fetched_at = ?
+     WHERE id = ?`,
+  ).run(
+    values.stars,
+    values.forks,
+    values.openIssues,
+    values.pushedAt,
+    values.latestReleaseTag,
+    fetchedAt,
+    repositoryId,
+  );
+}
+
+export function deleteRepositoryRow(db: Database.Database, repositoryId: number): void {
+  db.prepare('DELETE FROM repository WHERE id = ?').run(repositoryId);
+}

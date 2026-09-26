@@ -1,0 +1,14 @@
+interface SpinnerProps {
+  className?: string;
+}
+
+/** 轻量加载指示器。 */
+export function Spinner({ className = 'h-4 w-4' }: SpinnerProps) {
+  return (
+    <div
+      role="status"
+      aria-label="加载中"
+      className={`animate-spin rounded-full border-2 border-slate-500 border-t-transparent ${className}`}
+    />
+  );
+}
