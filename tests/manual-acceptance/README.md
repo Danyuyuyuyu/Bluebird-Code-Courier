@@ -5,14 +5,13 @@
 | 文件 | 角色 |
 | --- | --- |
 | `manual acceptance.html` | **使用入口**：人工验收矩阵工具，导入 / 导出文件一律用它。 |
-| `test template.html` | 工具的模板 / 备份，**仅参考和备份，不建议直接使用**（需要恢复工具时从它复制一份即可）。 |
 | `test template_20260926.md` | 清单 / 报告的格式模板（2026-09-26 M3 实例），**仅参考和备份，不建议直接使用**。 |
 
-> **模板是参考和备份，不建议使用**：不要用 `test template.html` 做验收，不要修改或覆盖导出 `test template_20260926.md`；模板坏了随时可另存恢复，日常操作只碰 `manual acceptance.html` 及其同名 .md。
+> **模板仅作参考与备份**：不要修改或覆盖 `test template_20260926.md`，日常操作只碰 `manual acceptance.html` 及其同名 .md。工具本体不再单独留副本——此前那份与使用入口逐字相同的 `test template.html` 已删除，需要恢复时从 git 历史取。
 
 ## 使用者操作
 
-浏览器打开 `tests\Manual Acceptance\manual acceptance.html` 导入导出文件：
+浏览器打开 `tests\manual-acceptance\manual acceptance.html` 导入导出文件：
 
 1. 「导入 .md」载入清单（或用「最近导入」直接重读最近一周的文件，免重复选文件）；
 2. 逐项执行验收，勾选验收状态、填实测备注与结论；

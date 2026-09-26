@@ -164,7 +164,7 @@ src/
 ├─ renderer/              React UI：App + pages/ + components/ + lib/
 └─ shared/                跨进程契约：types.ts + ipc.ts
 
-tests/                    Vitest 集成测试（含 helpers/ 与 manual acceptance/）
+tests/                    Vitest 集成测试（含 helpers/ 与 manual-acceptance/）
 docs/adr/                 架构决策记录
 docs/agents/              仓库工程约定（domain / issue-tracker / triage-labels）
 .agents/                  第三方 Agent 技能集（本机保留，不入库）
@@ -193,7 +193,7 @@ npm test   # = build:main + vitest run
 
 另有一个特殊回归测试 `tests/preload/preload-sandbox.test.ts`：直接执行编译产物 `dist/main/preload/index.js`，用沙箱 `require` 白名单（`electron/events/timers/url`）复现 Electron ≥20 的限制，断言通道名与 `src/shared/ipc.ts` 逐字一致。
 
-**UI 不写单测**，由 [`tests/manual acceptance/`](tests/manual%20acceptance/README.md) 的人工验收矩阵覆盖。
+**UI 不写单测**，由 [`tests/manual-acceptance/`](tests/manual-acceptance/README.md) 的人工验收矩阵覆盖。
 
 ---
 
@@ -210,7 +210,7 @@ npm test   # = build:main + vitest run
 - [`CONTEXT.md`](CONTEXT.md) —— 领域词汇表（含每条的 Avoid 词）。
 - [`docs/adr/`](docs/adr/) —— 架构决策记录。ADR-0001 记录**双栈决策**：v1 Windows 用 Electron，v1.1 Android 用 Kotlin + Jetpack Compose，两端业务逻辑各写一遍、以 v1 spec 对齐（**Kotlin 端目前仅为规划，尚未实现**）。
 - [`docs/agents/`](docs/agents/) —— 仓库工程约定：issue tracker（本地 Markdown）、triage 标签、领域文档规则。
-- `.agents/`（第三方 Agent 技能集）与 `.scratch/`（本地 issue tracker 与 v1 spec）—— **仅本机保留，不入库**。
+- `.agents/`（第三方 Agent 技能集）、`skills-lock.json`（其锁文件）与 `.scratch/`（本地 issue tracker 与 v1 spec）—— **仅本机保留，不入库**。
 - `tools/compat/no-pipe-spawn.cjs` —— 沙箱兼容垫片。受限环境中带管道 stdio 的子进程 `spawn` 会同步抛 `EPERM`，而 Vite 在 Windows 解析真实路径时会异步执行 `net use` 探测网络盘，本应静默跳过却会炸掉模块解析。该垫片包装 `child_process` 的捕获式 API，把同步抛错降级为"探测失败"，仅通过 `node --require` 注入 `test` / `test:watch` / `build:renderer` 三个脚本。
 - 根目录 `github_pulse_repository_monitor.html` 与 `octo_nexus_github_personal_center.html` 是**早期 UI 原型**（单文件 HTML + CDN，只有界面没有数据链路），其可用 UI 资产被 v1 复用；这两个文件**不入库**，仅本机保留。
 
@@ -220,7 +220,7 @@ npm test   # = build:main + vitest run
 
 - **M1** 地基：骨架 + core + 令牌连通
 - **M2** 核心链路端到端
-- **M3** = v1：打包与人工验收——清单持久化、三条轻量信息、五类全量、快照当日不重复、错误降级不崩溃、5 仓库冷启动就绪 ≤ 8 秒、NSIS 独立安装。人工验收矩阵已就位（[`tests/manual acceptance/`](tests/manual%20acceptance/README.md)）；安装包尚未生成（`release/` 未创建）
+- **M3** = v1：打包与人工验收——清单持久化、三条轻量信息、五类全量、快照当日不重复、错误降级不崩溃、5 仓库冷启动就绪 ≤ 8 秒、NSIS 独立安装。人工验收矩阵已就位（[`tests/manual-acceptance/`](tests/manual-acceptance/README.md)）；安装包尚未生成（`release/` 未创建）
 - **M4** = v1.1：Android 端（Kotlin + Jetpack Compose），另立 spec，按 v1 的数据结构与规则对齐
 
 ---
