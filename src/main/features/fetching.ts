@@ -29,14 +29,20 @@ import {
  *
  * 仅成功抓取后记历史快照（每天一档，手动刷新同样记档）。
  */
+/** 轻量抓取结果：展示字段值 + GitHub 返回的规范 full_name（落库以它为准）。 */
+export interface FetchedGlance extends GlanceValues {
+  fullName: string;
+}
+
 export async function fetchGlanceValues(
   github: GitHubPort,
   accessToken: string,
   fullName: string,
-): Promise<GlanceValues> {
+): Promise<FetchedGlance> {
   const meta = await github.getRepositoryMeta(accessToken, fullName);
   const latestRelease = await github.getLatestRelease(accessToken, fullName);
   return {
+    fullName: meta.fullName,
     stars: meta.stars,
     forks: meta.forks,
     openIssues: meta.openIssues,

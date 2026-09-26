@@ -15,6 +15,7 @@ import type {
   AccessTokenState,
 } from '../../shared/types';
 import { normalizeError } from './errors';
+import { parseRepoInput } from '../features/repo-input';
 import {
   readAccessToken,
   readPreferences,
@@ -106,18 +107,21 @@ export function createFacade(deps: FacadeDeps): OctoFacade {
       return Promise.resolve(listRepositoryRows(db).map(rowToGlance));
     },
     async addRepository(input: string): Promise<AddRepositoryResult> {
-      const fullName = input.trim();
-      const fail = (kind: 'access_token_invalid' | 'not_found' | 'unknown', message: string): AddRepositoryResult => ({
+      const fail = (
+        kind: 'access_token_invalid' | 'not_found' | 'unknown',
+        message: string,
+        fullName: string,
+      ): AddRepositoryResult => ({
         ok: false,
         repository: null,
         error: { kind, message, fullName },
       });
 
-      if (!/^[^\s/]+\/[^\s/]+$/.test(fullName)) {
-        return fail('not_found', '仓库名格式应为 owner/repo');
-      }
+      const parsed = parseRepoInput(input);
+      if (!parsed.ok) return fail('not_found', parsed.message, input.trim());
+      const fullName = `${parsed.owner}/${parsed.name}`;
       if (findRepositoryByFullName(db, fullName)) {
-        return fail('unknown', '该仓库已在监控清单中');
+        return fail('unknown', '该仓库已在监控清单中', fullName);
       }
       const auth = accessTokenOrFail(fullName);
       if (auth.error) return { ok: false, repository: null, error: auth.error };
@@ -125,7 +129,8 @@ export function createFacade(deps: FacadeDeps): OctoFacade {
       try {
         // 先抓取验证（不存在/无权限/断网都不入列），成功才落库
         const values = await fetchGlanceValues(github, auth.accessToken, fullName);
-        const [owner = '', name = ''] = fullName.split('/');
+        // 落库用 GitHub 返回的规范 full_name（用户输入的大小写不作数）
+        const [owner = '', name = ''] = values.fullName.split('/');
         const row = insertRepositoryRow(db, owner, name, clock.now().toISOString());
         const glance = applyGlanceValues(db, clock, row.id, values);
         return { ok: true, repository: glance, error: null };

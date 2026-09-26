@@ -90,13 +90,18 @@ describe('监控清单', () => {
     expect(await h().facade.listRepositories()).toEqual([]);
   });
 
-  it('非法仓库名给出明确报错（owner/repo 格式）', async () => {
+  it.each([
+    ['裸仓库名', 'not-a-repo'],
+    ['网址缺仓库名', 'https://github.com/only-owner'],
+    ['夹空格的脏输入', ' octo demo/hello '],
+  ])('格式不识别（%s）报错文案涵盖两种输入形态', async (_label, input) => {
     await ready();
 
-    const result = await h().facade.addRepository('not-a-repo');
+    const result = await h().facade.addRepository(input);
     expect(result.ok).toBe(false);
     expect(result.error?.kind).toBe('not_found');
     expect(result.error?.message).toContain('owner/repo');
+    expect(result.error?.message).toContain('网址');
   });
 
   it('重复加入同一仓库报错，清单不重复', async () => {
@@ -107,6 +112,30 @@ describe('监控清单', () => {
     const again = await h().facade.addRepository('octo-demo/hello-world');
     expect(again.ok).toBe(false);
     expect(await h().facade.listRepositories()).toHaveLength(1);
+  });
+
+  it('大小写不同的同一仓库重复加入被拒，清单不重复', async () => {
+    await ready();
+    h().github.addRepo(makeRepoData());
+    await h().facade.addRepository('octo-demo/hello-world');
+
+    const again = await h().facade.addRepository('https://github.com/Octo-Demo/Hello-World');
+    expect(again.ok).toBe(false);
+    expect(await h().facade.listRepositories()).toHaveLength(1);
+  });
+
+  it('落库使用 GitHub 返回的规范 full_name', async () => {
+    await ready();
+    h().github.addRepo(makeRepoData({ meta: { ...makeRepoData().meta, fullName: 'Octo-Demo/Hello-World' } }));
+
+    const result = await h().facade.addRepository('octo-demo/hello-world');
+    expect(result.ok).toBe(true);
+    const listed = await h().facade.listRepositories();
+    expect(listed[0]).toMatchObject({
+      owner: 'Octo-Demo',
+      name: 'Hello-World',
+      fullName: 'Octo-Demo/Hello-World',
+    });
   });
 
   it('从清单删除监控仓库', async () => {
@@ -128,5 +157,54 @@ describe('监控清单', () => {
     expect(listed).toHaveLength(1);
     expect(listed[0]).toMatchObject({ fullName: 'octo-demo/hello-world', stars: 1284 });
     expect(await reopened.facade.accessTokenState()).toEqual({ configured: true });
+  });
+
+  it('加入清单：GitHub 网址加入成功并归一为 owner/name', async () => {
+    await ready();
+    h().github.addRepo(makeRepoData());
+
+    const result = await h().facade.addRepository('https://github.com/octo-demo/hello-world');
+    expect(result.ok).toBe(true);
+    expect(result.repository).toMatchObject({
+      owner: 'octo-demo',
+      name: 'hello-world',
+      fullName: 'octo-demo/hello-world',
+    });
+  });
+
+  it.each([
+    ['深层路径', 'https://github.com/octo-demo/hello-world/tree/main/README.md'],
+    ['尾斜杠', 'https://github.com/octo-demo/hello-world/'],
+    ['.git 后缀', 'https://github.com/octo-demo/hello-world.git'],
+    ['query 与 fragment', 'https://github.com/octo-demo/hello-world?tab=readme-ov-file#readme'],
+    ['http 与 www', 'http://www.github.com/octo-demo/hello-world'],
+  ])('加入清单：网址变体（%s）归一为同一仓库', async (_label, input) => {
+    await ready();
+    h().github.addRepo(makeRepoData());
+
+    const result = await h().facade.addRepository(input);
+    expect(result.ok).toBe(true);
+    expect(result.repository).toMatchObject({ fullName: 'octo-demo/hello-world' });
+  });
+
+  it('加入清单：git@ SSH 形态归一为 owner/name', async () => {
+    await ready();
+    h().github.addRepo(makeRepoData());
+
+    const result = await h().facade.addRepository('git@github.com:octo-demo/hello-world.git');
+    expect(result.ok).toBe(true);
+    expect(result.repository).toMatchObject({ fullName: 'octo-demo/hello-world' });
+  });
+
+  it.each([
+    ['非 GitHub 网址', 'https://gitee.com/octo-demo/hello-world'],
+    ['非 GitHub SSH', 'git@gitlab.com:octo-demo/hello-world.git'],
+  ])('%s：明确报错且不入列', async (_label, input) => {
+    await ready();
+
+    const result = await h().facade.addRepository(input);
+    expect(result.ok).toBe(false);
+    expect(result.error?.message).toContain('github.com');
+    expect(await h().facade.listRepositories()).toEqual([]);
   });
 });

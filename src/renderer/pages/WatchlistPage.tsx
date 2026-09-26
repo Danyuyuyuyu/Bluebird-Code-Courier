@@ -110,8 +110,8 @@ export function WatchlistPage({ onOpenDetail, onGoSettings }: WatchlistPageProps
           type="text"
           value={newFullName}
           onChange={(event) => setNewFullName(event.target.value)}
-          placeholder="owner/repo"
-          aria-label="监控仓库（owner/repo）"
+          placeholder="owner/repo 或 GitHub 网址"
+          aria-label="监控仓库（owner/repo 或 GitHub 网址）"
           className="w-full min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none sm:max-w-72"
         />
         <button
@@ -142,7 +142,7 @@ export function WatchlistPage({ onOpenDetail, onGoSettings }: WatchlistPageProps
       {listQuery.isPending && !listQuery.data ? (
         <Loading label="正在加载监控清单…" />
       ) : repositories.length === 0 ? (
-        <EmptyState title="还没有监控仓库，输入 owner/repo 开始跟踪" />
+        <EmptyState title="还没有监控仓库，输入 owner/repo 或 GitHub 网址开始跟踪" />
       ) : (
         <div className={`space-y-2 transition-opacity ${listQuery.isFetching || refreshing ? 'opacity-60' : ''}`}>
           {repositories.map((repo) => (

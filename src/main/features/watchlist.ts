@@ -58,7 +58,8 @@ export function mustFindRepositoryRow(db: Database.Database, id: number): Reposi
 }
 
 export function findRepositoryByFullName(db: Database.Database, fullName: string): RepositoryRow | null {
-  const row = db.prepare('SELECT * FROM repository WHERE full_name = ?').get(fullName) as
+  // GitHub 仓库名大小写不敏感：查重同语义，防止同一仓库不同大小写重复入列
+  const row = db.prepare('SELECT * FROM repository WHERE full_name = ? COLLATE NOCASE').get(fullName) as
     | RepositoryRow
     | undefined;
   return row ?? null;

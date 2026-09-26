@@ -125,9 +125,11 @@ export class FakeGitHub implements GitHubPort {
   }
 
   private repo(fullName: string): FakeRepoData {
-    const data = this.repos.get(fullName);
-    if (!data) throw fixtures.notFound();
-    return data;
+    // 真实 GitHub API 对仓库名大小写不敏感（同语义）
+    for (const [key, data] of this.repos) {
+      if (key.toLowerCase() === fullName.toLowerCase()) return data;
+    }
+    throw fixtures.notFound();
   }
 
   async validateAccessToken(accessToken: string): Promise<void> {
