@@ -8,12 +8,6 @@ import { createHttpGitHub } from './core/github/http-github';
 import { createFacade } from './facade/facade';
 import { registerIpc } from './ipc';
 
-// 禁用 Chromium 沙箱：本应用只加载本地打包 UI、数据只经 IPC 进出，可接受该取舍。
-// 原因：Electron/Chromium 沙箱启动时校验应用目录 DACL，遇到无法解析的僵尸 SID 即崩
-// （0x80000003，见 https://github.com/electron/electron/issues/51761），本机目录树存在
-// 环境遗留的此类权限项。待上游修复后可移除本行以恢复沙箱隔离。
-app.commandLine.appendSwitch('no-sandbox');
-
 /**
  * Electron 主进程：承载服务层（core + features），经白名单 IPC 暴露用例门面。
  * 普通窗口、无托盘、无开机自启；关闭即停，不留后台进程；数据全部在本机。
