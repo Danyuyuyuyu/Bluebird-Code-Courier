@@ -52,29 +52,41 @@ function reportStartupFailure(error: unknown): void {
   app.exit(1);
 }
 
-void app
-  .whenReady()
-  .then(() => {
-    const userData = app.getPath('userData');
-    const logger = createFileLogger(path.join(userData, 'logs'));
-    logger.info('主进程启动');
-    const db = openDatabase(path.join(userData, 'octo.db'));
-    const facade = createFacade({
-      db,
-      github: createHttpGitHub(),
-      cipher: createSafeStorageCipherBox(safeStorage),
-      clock: systemClock,
-      logger,
-    });
-    registerIpc(facade);
-    createWindow();
-    logger.info('窗口已创建');
+// 单实例：两个实例写同一个 SQLite 文件会互相撞写锁（SQLITE_BUSY），第二个实例直接让位
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    const [existing] = BrowserWindow.getAllWindows();
+    if (!existing) return;
+    if (existing.isMinimized()) existing.restore();
+    existing.focus();
+  });
 
-    app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) createWindow();
-    });
-  })
-  .catch(reportStartupFailure);
+  void app
+    .whenReady()
+    .then(() => {
+      const userData = app.getPath('userData');
+      const logger = createFileLogger(path.join(userData, 'logs'));
+      logger.info('主进程启动');
+      const db = openDatabase(path.join(userData, 'octo.db'));
+      const facade = createFacade({
+        db,
+        github: createHttpGitHub(),
+        cipher: createSafeStorageCipherBox(safeStorage),
+        clock: systemClock,
+        logger,
+      });
+      registerIpc(facade);
+      createWindow();
+      logger.info('窗口已创建');
+
+      app.on('activate', () => {
+        if (BrowserWindow.getAllWindows().length === 0) createWindow();
+      });
+    })
+    .catch(reportStartupFailure);
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
