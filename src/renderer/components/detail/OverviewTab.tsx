@@ -2,14 +2,16 @@ import type { Detail, IssueItem, PullRequestItem } from '../../../shared/types';
 import { formatRelativeTime } from '../../lib/time';
 import { GlanceFact } from '../GlanceFact';
 import { Section } from '../Section';
-import { TrendChart } from '../TrendChart';
 import { BuildStatusBadge } from './BuildStatus';
 import { CommitList } from './CommitList';
 import { NumberedItemRow } from './IssuesAndPulls';
 import { ReleaseList } from './ReleaseList';
+import { TrendPanel } from './TrendPanel';
 
 /** 概览每条摘要最多显示几条；完整内容仍在各自 Tab。 */
 const SUMMARY_LIMIT = 5;
+/** 概览里最近更新列表的条数。 */
+const RECENT_LIMIT = 3;
 
 interface OverviewTabProps {
   detail: Detail;
@@ -21,9 +23,11 @@ function byUpdatedDesc(a: IssueItem | PullRequestItem, b: IssueItem | PullReques
 
 function RecentList({
   title,
+  kind,
   items,
 }: {
   title: string;
+  kind: 'issue' | 'pull';
   items: (IssueItem | PullRequestItem)[];
 }) {
   return (
@@ -34,7 +38,7 @@ function RecentList({
       ) : (
         <ul className="divide-y divide-subtle">
           {items.map((item, index) => (
-            <NumberedItemRow key={`${item.number}|${index}`} item={item} />
+            <NumberedItemRow key={`${item.number}|${index}`} item={item} kind={kind} />
           ))}
         </ul>
       )}
@@ -61,24 +65,29 @@ export function OverviewTab({ detail }: OverviewTabProps) {
         </div>
       </Section>
 
+      {/* min-w-0：提交消息是 truncate（nowrap）的，网格项默认 min-width:auto 会被它撑宽整列 */}
       <div className="grid gap-4 lg:grid-cols-2">
-        <Section title="最新发版">
-          <ReleaseList releases={releases.slice(0, SUMMARY_LIMIT)} />
-          {releases.length > SUMMARY_LIMIT ? (
-            <p className="mt-2 text-xs text-muted">
-              仅显示最近 {SUMMARY_LIMIT} 条，共 {releases.length} 条
-            </p>
-          ) : null}
-        </Section>
+        <div className="min-w-0">
+          <Section title="最新发版">
+            <ReleaseList releases={releases.slice(0, SUMMARY_LIMIT)} />
+            {releases.length > SUMMARY_LIMIT ? (
+              <p className="mt-2 text-xs text-muted">
+                仅显示最近 {SUMMARY_LIMIT} 条，已抓取 {releases.length} 条
+              </p>
+            ) : null}
+          </Section>
+        </div>
 
-        <Section title="最近提交">
-          <CommitList commits={commits.slice(0, SUMMARY_LIMIT)} />
-          {commits.length > SUMMARY_LIMIT ? (
-            <p className="mt-2 text-xs text-muted">
-              仅显示最近 {SUMMARY_LIMIT} 条，共 {commits.length} 条
-            </p>
-          ) : null}
-        </Section>
+        <div className="min-w-0">
+          <Section title="最近提交">
+            <CommitList commits={commits.slice(0, SUMMARY_LIMIT)} />
+            {commits.length > SUMMARY_LIMIT ? (
+              <p className="mt-2 text-xs text-muted">
+                仅显示最近 {SUMMARY_LIMIT} 条，已抓取 {commits.length} 条
+              </p>
+            ) : null}
+          </Section>
+        </div>
       </div>
 
       <Section title="Issue & PR">
@@ -99,11 +108,13 @@ export function OverviewTab({ detail }: OverviewTabProps) {
             <div className="grid gap-x-6 gap-y-3 md:grid-cols-2">
               <RecentList
                 title="最近更新的议题"
-                items={[...issues].sort(byUpdatedDesc).slice(0, 3)}
+                kind="issue"
+                items={[...issues].sort(byUpdatedDesc).slice(0, RECENT_LIMIT)}
               />
               <RecentList
                 title="最近更新的合并请求"
-                items={[...pullRequests].sort(byUpdatedDesc).slice(0, 3)}
+                kind="pull"
+                items={[...pullRequests].sort(byUpdatedDesc).slice(0, RECENT_LIMIT)}
               />
             </div>
           </div>
@@ -111,7 +122,7 @@ export function OverviewTab({ detail }: OverviewTabProps) {
       </Section>
 
       <Section title="趋势摘要">
-        <TrendChart trend={trend} compact />
+        <TrendPanel trend={trend} scope="all" compact />
       </Section>
     </div>
   );

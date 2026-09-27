@@ -16,8 +16,8 @@
 | 6 | 设计 Token | ✅ 2026-09-27 | ✅ 语义类护栏断言 | ⏳ TC-39～TC-40 |
 | 7 | System / Light / Dark | ✅ 2026-09-27 | ✅ 偏好/effective/图表断言 | ⏳ TC-41～TC-48 |
 | 8 | 设置页重构 | ✅ 2026-09-27 | ✅ 渲染层断言 | ⏳ TC-49～TC-52 |
-| 9 | 趋势图重构 | ⬜ 未开始 | — | — |
-| 10 | Release / Commit / Issue / PR 长列表 | 🔶 概览摘要 + 完整列表分层已做；Stable/RC/Alpha 标记未做 | — | ⏳ TC-11～TC-14 |
+| 9 | 趋势图重构（Stars / Forks 独立图 + 变化量 + 7D/30D/90D） | ✅ 2026-09-27 | ✅ 渲染层断言 + 浏览器像素实测 | ⏳ TC-53～TC-59 |
+| 10 | Release / Commit / Issue / PR 数据表达 | ✅ 2026-09-27（Stable 标记**不做**：domain 无 prerelease 字段，只认 alpha/beta/rc） | ✅ 渲染层断言 + 浏览器实测 | ⏳ TC-60～TC-68 |
 | 11 | 构建状态组件 | 🔶 徽章语义与概览置顶已做；外链通道未建立 | ✅ 渲染层断言 | ⏳ TC-10 |
 | 12 | 公共组件 | 🔶 已提取 ThemeSelector / SettingSection / 详情与清单的列表组件；Button / Card 等未统一 | — | — |
 | 13 | 桌面布局 / 响应式 | 🔶 内容宽度 1152px、换行与横向滚动已就位 | ✅ 浏览器实测 | ⏳ TC-23、TC-24、TC-38 |
@@ -520,6 +520,17 @@ Forks
 
 ---
 
+## 9.1 实际实现（2026-09-27）
+
+- **两张独立的图**：`TrendMetric` 每个指标一张 Chart.js 折线图、各自一套 Y 轴，Y 轴按各自数据范围自适应（不强制从 0 起），不再共用刻度；单条数据线不带图例。
+- **变化量本地计算**：`src/renderer/lib/trend.ts` 的 `orderSnapshots` / `filterByRange` / `summarizeMetric`——按 `capturedAt` 升序（不假设入参有序、不改原数组、丢弃时间戳不可解析的记录），取窗口内最早可用值为基线、最新可用值为当前值，`delta = current - baseline`。
+- **不伪造数据**：有效数值点少于 2 个时 `delta = null`，界面显示「该时间范围内的记录不足 2 次，无法计算变化」；0 条显示「暂无趋势数据…」，1 条显示「已有首次记录…」。绝不显示 `+0`。
+- **时间范围 7D / 30D / 90D**：`TrendRangeSelector`（真按钮 + `aria-pressed` + `role="group"`）纯本地过滤，无任何额外请求。范围文案按实际记录跨度说话：窗口被真实数据填满才说「过去 N 天」，否则说「已记录 N 天」。
+- **图表不是唯一信息来源**：每张卡以文本给出当前值、变化量、记录范围（`MM-DD ~ MM-DD · 共 N 次记录`），canvas 另有 `aria-label`。
+- **概览**用同一组件的紧凑版（无坐标轴、h-16 sparkline，`scope = all`），不把概览撑长。
+
+---
+
 # Phase 10 · 长列表优化
 
 ## 10.1 Release
@@ -577,6 +588,16 @@ Issues & Pull Requests
 
 ✓ 当前没有开放的 Issue 或 Pull Request
 ```
+
+---
+
+## 10.4 实际实现与偏差（2026-09-27）
+
+- **发版类型只认 alpha / beta / rc**：`classifyReleaseTag()` 按分隔符切词后精确匹配 `rc` / `rc1` / `beta` / `beta2` / `alpha` 这类词；**不再显示 Stable**。原因：`ReleaseItem` 只有 `tagName / title / publishedAt`，没有 GitHub 的 `prerelease` / `draft` 字段，"普通版本号 = Stable" 属于过度推断，而且 nightly / canary / dev / snapshot 会被误判。不显示徽章比标错更诚实。
+- **发版层级**：`Tag → 类型徽章 → 绝对短日期`，标题只在它不等于 tag 时另起一行（GitHub 上 `name === tag_name` 很常见）。
+- **概览发版**仍是最近 5 条 + 条数提示；计数文案统一改为「已抓取 N 条」——抓取只取最近一页，说"共 N 条"会夸大。
+- **提交**：消息一行 `truncate` 并带 `title` 露出全文（长 merge 提交不会撑高列表），第二层 `作者 · 相对时间 · SHA`，SHA 等宽弱色放行末。
+- **Issue / PR**：两者皆空时只留一行 `✓ 当前没有开放的 Issue 或 Pull Request`；有数据时先给 `议题 N 条 / 合并请求 M 条` 计数摘要再分区；每行开头是文字类型徽章 `Issue` / `PR`，类型与状态都不只靠颜色。
 
 ---
 

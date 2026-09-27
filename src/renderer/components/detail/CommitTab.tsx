@@ -8,7 +8,7 @@ export function CommitTab({ commits }: { commits: Detail['commits'] }) {
     <Section title="提交">
       <CommitList commits={commits} />
       {commits.length > 0 ? (
-        <p className="mt-2 text-xs text-muted">共 {commits.length} 条</p>
+        <p className="mt-2 text-xs text-muted">已抓取 {commits.length} 条</p>
       ) : null}
     </Section>
   );

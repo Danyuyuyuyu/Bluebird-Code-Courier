@@ -8,7 +8,7 @@ export function ReleaseTab({ releases }: { releases: Detail['releases'] }) {
     <Section title="发版">
       <ReleaseList releases={releases} />
       {releases.length > 0 ? (
-        <p className="mt-2 text-xs text-muted">共 {releases.length} 条</p>
+        <p className="mt-2 text-xs text-muted">已抓取 {releases.length} 条</p>
       ) : null}
     </Section>
   );

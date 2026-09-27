@@ -1,4 +1,5 @@
 import type { Glance } from '../../../shared/types';
+import { formatCount } from '../../lib/format';
 import { formatRelativeTime, isWithinDays } from '../../lib/time';
 import { GlanceFact } from '../GlanceFact';
 import { Spinner } from '../Spinner';
@@ -53,16 +54,8 @@ export function RepositoryHeader({
         </div>
 
         <div className="mt-4 flex flex-wrap items-baseline gap-x-6 gap-y-2">
-          <GlanceFact
-            label="Stars"
-            value={repository && repository.stars !== null ? String(repository.stars) : '—'}
-            mono
-          />
-          <GlanceFact
-            label="Forks"
-            value={repository && repository.forks !== null ? String(repository.forks) : '—'}
-            mono
-          />
+          <GlanceFact label="Stars" value={formatCount(repository?.stars)} mono />
+          <GlanceFact label="Forks" value={formatCount(repository?.forks)} mono />
           <GlanceFact
             label="最近活动"
             value={repository?.pushedAt ? formatRelativeTime(repository.pushedAt) : '—'}

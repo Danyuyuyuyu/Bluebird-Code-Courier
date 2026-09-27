@@ -1,4 +1,5 @@
 import type { Glance } from '../../shared/types';
+import { formatCount } from '../lib/format';
 import { formatRelativeTime, isWithinDays } from '../lib/time';
 import { GlanceFact } from './GlanceFact';
 import { RepositoryActions } from './watchlist/RepositoryActions';
@@ -34,7 +35,7 @@ export function RepoRow({ repo, onOpen, onRemove, refreshing }: RepoRowProps) {
             {refreshing ? <span className="text-secondary"> · 正在更新…</span> : null}
           </span>
           <span className="mt-3 flex flex-wrap items-baseline gap-x-6 gap-y-2">
-            <GlanceFact label="Stars" value={repo.stars === null ? '—' : String(repo.stars)} mono />
+            <GlanceFact label="Stars" value={formatCount(repo.stars)} mono />
             <GlanceFact
               label="最近活动"
               value={repo.pushedAt ? formatRelativeTime(repo.pushedAt) : '—'}

@@ -1,27 +1,48 @@
 import type { ReleaseItem } from '../../../shared/types';
+import { PRERELEASE_LABELS, classifyReleaseTag, dedupeReleaseTitle } from '../../lib/release';
+import type { PrereleaseKind } from '../../lib/release';
 import { formatDate } from '../../lib/time';
 
-interface ReleaseListProps {
-  releases: ReleaseItem[];
+/**
+ * 预发布类型徽章：只在 tag 里明确写了 alpha / beta / rc 时出现。
+ * 没有 prerelease 字段可用，所以不对"普通版本号"推断 Stable——不显示比标错更诚实。
+ */
+const KIND_TONES: Record<PrereleaseKind, string> = {
+  rc: 'border-info/40 bg-info-soft text-info',
+  beta: 'border-warning/40 bg-warning-soft text-warning',
+  alpha: 'border-warning/40 bg-warning-soft text-warning',
+};
+
+export function ReleaseKindBadge({ tagName }: { tagName: string }) {
+  const kind = classifyReleaseTag(tagName);
+  if (kind === null) return null;
+  return (
+    <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs ${KIND_TONES[kind]}`}>
+      {PRERELEASE_LABELS[kind]}
+    </span>
+  );
 }
 
-/** 发版行：标签 → 标题 → 发布日期；概览摘要与「发版」Tab 共用同一份数据与渲染。 */
-export function ReleaseList({ releases }: ReleaseListProps) {
+/** 发版行：Tag → 类型 → 发布日期，标题只在它与 Tag 不同时另起一行。 */
+export function ReleaseList({ releases }: { releases: ReleaseItem[] }) {
   if (releases.length === 0) {
     return <p className="text-sm text-muted">无发版</p>;
   }
   return (
     <ul className="divide-y divide-subtle">
-      {releases.map((release, index) => (
-        <li
-          key={`${release.tagName}|${index}`}
-          className="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2 first:pt-0 last:pb-0"
-        >
-          <span className="font-mono text-xs text-accent">{release.tagName}</span>
-          <span className="min-w-0 flex-1 text-sm text-primary">{release.title}</span>
-          <span className="text-xs text-muted">{formatDate(release.publishedAt)}</span>
-        </li>
-      ))}
+      {releases.map((release, index) => {
+        const title = dedupeReleaseTitle(release.title, release.tagName);
+        return (
+          <li key={`${release.tagName}|${index}`} className="py-2 first:pt-0 last:pb-0">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+              <span className="break-all font-mono text-xs text-accent">{release.tagName}</span>
+              <ReleaseKindBadge tagName={release.tagName} />
+              <span className="ml-auto shrink-0 text-xs text-muted">{formatDate(release.publishedAt)}</span>
+            </div>
+            {title ? <div className="mt-0.5 text-sm text-primary">{title}</div> : null}
+          </li>
+        );
+      })}
     </ul>
   );
 }

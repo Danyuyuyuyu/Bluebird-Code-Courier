@@ -4,7 +4,7 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { AddRepositoryResult, AccessTokenResult, Detail, Glance, OctoBridge } from '../../src/shared/types';
+import type { AddRepositoryResult, AccessTokenResult, Detail, Glance, OctoBridge, Snapshot } from '../../src/shared/types';
 import { App } from '../../src/renderer/App';
 import { ThemeProvider } from '../../src/renderer/lib/theme';
 
@@ -101,6 +101,8 @@ export interface StubOptions {
   saveTokenResult?: AccessTokenResult;
   /** validateAccessToken 的返回（默认成功）。 */
   validateTokenResult?: AccessTokenResult;
+  /** 覆盖全量信息的各分区（trend / releases / commits / issues / pullRequests / build）。 */
+  detail?: Partial<Detail>;
 }
 
 export function makeGlance(id: number, fullName: string): Glance {
@@ -120,7 +122,7 @@ export function makeGlance(id: number, fullName: string): Glance {
   };
 }
 
-function makeDetail(repository: Glance): Detail {
+export function makeDetail(repository: Glance, overrides: Partial<Detail> = {}): Detail {
   return {
     repository,
     releases: [],
@@ -130,7 +132,25 @@ function makeDetail(repository: Glance): Detail {
     build: { status: 'none', conclusion: null, workflowName: null, url: null, finishedAt: null },
     // 空趋势：概览只渲染「随使用积累」提示，不拉 chart.js 画布
     trend: [],
+    ...overrides,
   };
+}
+
+/** 一条历史快照；不传的指标记空。 */
+export function makeSnapshot(
+  capturedAt: string,
+  stars: number | null = null,
+  forks: number | null = null,
+): Snapshot {
+  return { capturedAt, stars, forks, openIssues: null, latestReleaseTag: null, pushedAt: null };
+}
+
+/** 相对"今天本地 0 点"往前 daysAgo 天的 ISO 时间戳；测试里把系统时间定在正午，边界就不会压在数据点上。 */
+export function daysAgoIso(daysAgo: number, hour = 0): string {
+  const date = new Date();
+  date.setHours(hour, 0, 0, 0);
+  date.setDate(date.getDate() - daysAgo);
+  return date.toISOString();
 }
 
 export function createStub(options: StubOptions = {}): StubHandle {
@@ -209,7 +229,7 @@ export function createStub(options: StubOptions = {}): StubHandle {
       calls.fetchDetail += 1;
       const repository = repositories.find((item) => item.id === repositoryId);
       if (!repository) return { detail: null, error: null };
-      return { detail: makeDetail(repository), error: null };
+      return { detail: makeDetail(repository, options.detail), error: null };
     },
   };
 
@@ -406,6 +426,57 @@ export function segmentedButton(text: string): HTMLButtonElement | null {
   return (
     [...document.querySelectorAll<HTMLButtonElement>('[role="group"] button')].find(
       (button) => button.textContent?.trim() === text,
+    ) ?? null
+  );
+}
+
+/** 详情页二级 Tab（按文案取）。 */
+export function tab(text: string): HTMLButtonElement | null {
+  return (
+    [...document.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find(
+      (button) => button.textContent?.trim() === text,
+    ) ?? null
+  );
+}
+
+/** 进入某个仓库的详情页（点仓库卡片主区域）。 */
+export async function openRepo(fullName: string): Promise<void> {
+  await settle();
+  await click(repoOpenButton(fullName));
+  await settle();
+}
+
+export interface ChartStubConfig {
+  labels: string[];
+  datasets: Array<{ label: string; data: Array<number | null>; color: string }>;
+  legendDisplay: boolean | null;
+  xDisplay: boolean | null;
+  yDisplay: boolean | null;
+  ariaLabel: string | null;
+}
+
+/** 读 tests/renderer/chart-stub.tsx 摊在 DOM 上的 Chart.js 配置（happy-dom 拿不到 2d context）。 */
+export function chartConfigs(): ChartStubConfig[] {
+  return [...document.querySelectorAll<HTMLElement>('[data-chart]')].map(
+    (element) => JSON.parse(element.dataset.chart ?? '{}') as ChartStubConfig,
+  );
+}
+
+/** 某个指标的趋势卡（stars / forks）。 */
+export function trendCard(metric: 'stars' | 'forks'): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`[data-metric="${metric}"]`);
+}
+
+/** 某个容器里的列表行（默认整篇）。 */
+export function listRows(container: ParentNode = document): HTMLElement[] {
+  return [...container.querySelectorAll<HTMLElement>('ul > li')];
+}
+
+/** 按标题取一个 Section（用于把断言限定在某个区块里）。 */
+export function sectionByTitle(title: string): HTMLElement | null {
+  return (
+    [...document.querySelectorAll<HTMLElement>('section')].find(
+      (section) => section.querySelector('h2')?.textContent?.trim() === title,
     ) ?? null
   );
 }
