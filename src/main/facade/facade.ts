@@ -92,8 +92,14 @@ export function createFacade(deps: FacadeDeps): OctoFacade {
     async saveAccessToken(accessToken: string): Promise<AccessTokenResult> {
       const result = await validateAccessToken(accessToken);
       if (!result.ok) return result;
-      // 校验通过才落库（密文），重复保存即覆盖旧令牌
-      writeAccessToken(db, cipher, accessToken);
+      try {
+        // 校验通过才落库（密文），重复保存即覆盖旧令牌
+        writeAccessToken(db, cipher, accessToken);
+      } catch (error) {
+        // 系统钥匙串不可用等落库失败：必须报错，不能让用户以为已保存
+        logger.error('访问令牌保存失败', error);
+        return { ok: false, error: normalizeError(error) };
+      }
       return { ok: true, error: null };
     },
     getSettings(): Promise<SettingsView> {

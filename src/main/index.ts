@@ -1,4 +1,4 @@
-import { app, BrowserWindow, safeStorage } from 'electron';
+import { app, BrowserWindow, dialog, safeStorage } from 'electron';
 import path from 'node:path';
 import { openDatabase } from './core/db/database';
 import { createSafeStorageCipherBox } from './core/cipher/cipher-box';
@@ -36,26 +36,45 @@ function createWindow(): BrowserWindow {
   return window;
 }
 
-void app.whenReady().then(() => {
-  const userData = app.getPath('userData');
-  const logger = createFileLogger(path.join(userData, 'logs'));
-  logger.info('主进程启动');
-  const db = openDatabase(path.join(userData, 'octo.db'));
-  const facade = createFacade({
-    db,
-    github: createHttpGitHub(),
-    cipher: createSafeStorageCipherBox(safeStorage),
-    clock: systemClock,
-    logger,
-  });
-  registerIpc(facade);
-  createWindow();
-  logger.info('窗口已创建');
+/**
+ * 启动期任何失败（库打不开、日志目录不可写、窗口创建失败）都必须让用户看见：
+ * 打包后没有控制台，沉默退出等于"双击没反应"。
+ */
+function reportStartupFailure(error: unknown): void {
+  const detail = error instanceof Error ? error.message : String(error);
+  let logHint = '';
+  try {
+    logHint = `\n\n日志目录：${path.join(app.getPath('userData'), 'logs')}`;
+  } catch {
+    // userData 路径取不到时省略提示，不能因此再抛错
+  }
+  dialog.showErrorBox('OCTO 仓库监控器启动失败', `应用无法启动：${detail}${logHint}`);
+  app.exit(1);
+}
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
-  });
-});
+void app
+  .whenReady()
+  .then(() => {
+    const userData = app.getPath('userData');
+    const logger = createFileLogger(path.join(userData, 'logs'));
+    logger.info('主进程启动');
+    const db = openDatabase(path.join(userData, 'octo.db'));
+    const facade = createFacade({
+      db,
+      github: createHttpGitHub(),
+      cipher: createSafeStorageCipherBox(safeStorage),
+      clock: systemClock,
+      logger,
+    });
+    registerIpc(facade);
+    createWindow();
+    logger.info('窗口已创建');
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
+  })
+  .catch(reportStartupFailure);
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
