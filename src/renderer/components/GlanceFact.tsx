@@ -10,9 +10,13 @@ interface GlanceFactProps {
 export function GlanceFact({ label, value, mono = false, accent = false, muted = false }: GlanceFactProps) {
   const valueColor = accent ? 'text-accent' : muted ? 'text-muted' : 'text-primary';
   return (
-    <div className="flex items-baseline gap-1.5">
-      <span className="text-xs text-muted">{label}</span>
-      <span className={`text-sm ${valueColor} ${mono ? 'font-mono' : ''}`}>{value}</span>
+    <div className="flex min-w-0 items-baseline gap-2">
+      <span className="shrink-0 text-xs text-muted">{label}</span>
+      <span
+        className={`min-w-0 text-[15px] font-semibold leading-5 ${valueColor} ${mono ? 'break-all font-mono text-[13px]' : ''}`}
+      >
+        {value}
+      </span>
     </div>
   );
 }

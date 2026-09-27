@@ -11,7 +11,7 @@ interface SectionProps {
 /** 全量信息里的一个更新类别区块。 */
 export function Section({ title, action, children }: SectionProps) {
   return (
-    <section className="rounded-lg border border-default bg-surface p-4">
+    <section className="min-w-0 rounded-lg border border-subtle bg-surface p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <h2 className="text-sm font-semibold text-primary">{title}</h2>
         {action}

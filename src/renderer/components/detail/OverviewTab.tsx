@@ -1,10 +1,9 @@
 import type { Detail, IssueItem, PullRequestItem } from '../../../shared/types';
-import { formatRelativeTime } from '../../lib/time';
 import { GlanceFact } from '../GlanceFact';
 import { Section } from '../Section';
-import { BuildStatusBadge } from './BuildStatus';
+import { BuildStatusPanel } from './BuildStatus';
 import { CommitList } from './CommitList';
-import { NumberedItemRow } from './IssuesAndPulls';
+import { IssueEmptyState, NumberedItemRow } from './IssuesAndPulls';
 import { ReleaseList } from './ReleaseList';
 import { TrendPanel } from './TrendPanel';
 
@@ -67,13 +66,7 @@ export function OverviewTab({ detail }: OverviewTabProps) {
   return (
     <div className="space-y-4">
       <Section title="构建状态">
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-          <BuildStatusBadge status={build.status} />
-          {build.workflowName ? <GlanceFact label="工作流" value={build.workflowName} /> : null}
-          {build.finishedAt ? (
-            <GlanceFact label="完成于" value={formatRelativeTime(build.finishedAt)} />
-          ) : null}
-        </div>
+        <BuildStatusPanel build={build} />
       </Section>
 
       {/* min-w-0：提交消息是 truncate（nowrap）的，网格项默认 min-width:auto 会被它撑宽整列 */}
@@ -103,7 +96,7 @@ export function OverviewTab({ detail }: OverviewTabProps) {
 
       <Section title="Issue & PR">
         {noIssuesAtAll ? (
-          <p className="text-sm text-secondary">✓ 当前没有开放的 Issue 或 Pull Request</p>
+          <IssueEmptyState />
         ) : (
           <div className="space-y-3">
             <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">

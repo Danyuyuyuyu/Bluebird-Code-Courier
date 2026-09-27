@@ -9,16 +9,16 @@ import { ExternalLinkButton } from '../ExternalLinkButton';
  * 没有 prerelease 字段可用，所以不对"普通版本号"推断 Stable——不显示比标错更诚实。
  */
 const KIND_TONES: Record<PrereleaseKind, string> = {
-  rc: 'border-info/40 bg-info-soft text-info',
-  beta: 'border-warning/40 bg-warning-soft text-warning',
-  alpha: 'border-warning/40 bg-warning-soft text-warning',
+  rc: 'border-subtle bg-surface-raised text-muted',
+  beta: 'border-subtle bg-surface-raised text-muted',
+  alpha: 'border-subtle bg-surface-raised text-muted',
 };
 
 export function ReleaseKindBadge({ tagName }: { tagName: string }) {
   const kind = classifyReleaseTag(tagName);
   if (kind === null) return null;
   return (
-    <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs ${KIND_TONES[kind]}`}>
+    <span className={`inline-flex h-5 shrink-0 items-center rounded-full border px-1.5 text-[11px] ${KIND_TONES[kind]}`}>
       {PRERELEASE_LABELS[kind]}
     </span>
   );
@@ -45,14 +45,14 @@ export function ReleaseList({ releases, owner, name }: ReleaseListProps) {
               <ExternalLinkButton
                 target={{ kind: 'release', owner, name, tagName: release.tagName }}
                 label={`在 GitHub 打开发版 ${release.tagName}`}
-                className="break-all font-mono text-xs text-accent transition-colors hover:underline"
+                className="break-all font-mono text-[13px] text-accent transition-colors duration-150 ease-out hover:underline active:text-accent-hover"
               >
                 {release.tagName}
               </ExternalLinkButton>
               <ReleaseKindBadge tagName={release.tagName} />
               <span className="ml-auto shrink-0 text-xs text-muted">{formatDate(release.publishedAt)}</span>
             </div>
-            {title ? <div className="mt-0.5 text-sm text-primary">{title}</div> : null}
+            {title ? <div className="mt-1 text-sm font-medium text-primary">{title}</div> : null}
           </li>
         );
       })}

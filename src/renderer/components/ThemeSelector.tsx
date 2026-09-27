@@ -22,7 +22,8 @@ export function ThemeSelector() {
         <div
           role="group"
           aria-labelledby="theme-label"
-          className="inline-flex rounded-md border border-default bg-surface-raised p-0.5"
+          aria-busy={saving}
+          className="inline-flex h-9 items-center rounded-md border border-default bg-surface-raised p-0.5"
         >
           {THEME_PREFERENCES.map((value) => {
             const active = value === preference;
@@ -32,10 +33,10 @@ export function ThemeSelector() {
                 type="button"
                 aria-pressed={active}
                 onClick={() => setPreference(value)}
-                className={`rounded px-3 py-1.5 text-sm transition-colors ${
+                className={`h-8 rounded px-3 text-sm transition-colors duration-150 ease-out ${
                   active
-                    ? 'bg-surface font-medium text-primary shadow-sm'
-                    : 'text-secondary hover:text-primary'
+                    ? 'bg-surface font-medium text-accent active:bg-surface-active'
+                    : 'text-secondary hover:bg-surface-hover hover:text-primary active:bg-surface-active'
                 }`}
               >
                 {LABELS[value]}
@@ -45,7 +46,7 @@ export function ThemeSelector() {
         </div>
         {saving ? (
           <span className="flex items-center gap-1.5 text-xs text-muted">
-            <Spinner className="h-3 w-3" />
+            <Spinner className="h-3.5 w-3.5" />
             保存中…
           </span>
         ) : null}

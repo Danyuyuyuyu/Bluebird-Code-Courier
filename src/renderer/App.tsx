@@ -17,10 +17,10 @@ interface SelectedRepo {
 }
 
 function navButtonClass(active: boolean, disabled: boolean): string {
-  const base = 'rounded-md px-3 py-1.5 text-sm transition-colors';
+  const base = 'inline-flex h-9 items-center rounded-md px-3 text-sm transition-colors duration-150 ease-out';
   if (disabled) return `${base} cursor-not-allowed text-muted`;
-  if (active) return `${base} bg-surface-raised text-accent`;
-  return `${base} text-secondary hover:bg-surface-hover active:bg-surface-active`;
+  if (active) return `${base} bg-surface-raised text-accent active:bg-surface-active`;
+  return `${base} text-secondary hover:bg-surface-hover hover:text-primary active:bg-surface-active`;
 }
 
 export function App() {
@@ -95,7 +95,7 @@ export function App() {
 
   return (
     <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col">
-      <header className="sticky top-0 z-10 border-b border-default bg-app/95 px-4 py-3">
+      <header className="sticky top-0 z-10 border-b border-subtle bg-app/95 px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <div className="flex items-center gap-2">
             <span className="flex h-7 w-7 items-center justify-center rounded-md bg-accent-soft font-mono text-xs font-bold text-accent">
@@ -108,6 +108,7 @@ export function App() {
               type="button"
               onClick={() => setView('watchlist')}
               disabled={!configured}
+              aria-current={activeView === 'watchlist' || activeView === 'detail' ? 'page' : undefined}
               className={navButtonClass(
                 activeView === 'watchlist' || activeView === 'detail',
                 !configured,
@@ -118,6 +119,7 @@ export function App() {
             <button
               type="button"
               onClick={() => setView('settings')}
+              aria-current={activeView === 'settings' ? 'page' : undefined}
               className={navButtonClass(activeView === 'settings', false)}
             >
               设置

@@ -16,7 +16,7 @@ export function TrendRangeSelector({ value, onChange }: TrendRangeSelectorProps)
       <div
         role="group"
         aria-labelledby="trend-range-label"
-        className="inline-flex overflow-hidden rounded-md border border-default"
+        className="inline-flex h-8 overflow-hidden rounded-md border border-default"
       >
         {TREND_RANGES.map((range) => {
           const active = range === value;
@@ -26,10 +26,10 @@ export function TrendRangeSelector({ value, onChange }: TrendRangeSelectorProps)
               type="button"
               aria-pressed={active}
               onClick={() => onChange(range)}
-              className={`border-l border-default px-3 py-1 text-xs transition-colors first:border-l-0 ${
+              className={`h-full border-l border-default px-3 text-xs transition-colors duration-150 ease-out first:border-l-0 focus-visible:outline-offset-[-3px] ${
                 active
-                  ? 'bg-accent-soft font-medium text-accent'
-                  : 'text-secondary hover:bg-surface-hover hover:text-primary'
+                  ? 'bg-accent-soft font-medium text-accent active:bg-surface-active'
+                  : 'text-secondary hover:bg-surface-hover hover:text-primary active:bg-surface-active'
               }`}
             >
               {TREND_RANGE_LABELS[range]}

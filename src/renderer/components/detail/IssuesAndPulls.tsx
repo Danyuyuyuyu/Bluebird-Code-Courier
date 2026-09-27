@@ -21,7 +21,7 @@ const KIND_NAMES: Record<ItemKind, string> = { issue: '议题', pull: '合并请
 
 function StateBadge({ state }: { state: 'open' | 'closed' }) {
   return (
-    <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs ${STATE_STYLES[state]}`}>
+    <span className={`inline-flex h-5 shrink-0 items-center rounded-full border px-1.5 text-[11px] ${STATE_STYLES[state]}`}>
       {state === 'open' ? '开启' : '已关闭'}
     </span>
   );
@@ -29,7 +29,20 @@ function StateBadge({ state }: { state: 'open' | 'closed' }) {
 
 function KindBadge({ kind }: { kind: ItemKind }) {
   const { label, tone } = KIND_STYLES[kind];
-  return <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs ${tone}`}>{label}</span>;
+  return <span className={`inline-flex h-5 shrink-0 items-center rounded-full border px-1.5 text-[11px] ${tone}`}>{label}</span>;
+}
+
+/** 紧凑但稳定的空态，用同一表现覆盖概览和完整 Issue & PR 列表。 */
+export function IssueEmptyState() {
+  return (
+    <div className="flex min-h-[88px] items-center gap-3 rounded-md bg-surface-raised px-4 py-3 text-sm text-secondary">
+      <span aria-hidden="true" className="shrink-0 font-medium text-success">
+        ✓
+      </span>
+      {' '}
+      <p>当前没有开放的 Issue 或 Pull Request</p>
+    </div>
+  );
 }
 
 interface NumberedItemRowProps {
@@ -47,7 +60,7 @@ export function NumberedItemRow({ item, kind, owner, name }: NumberedItemRowProp
       <ExternalLinkButton
         target={{ kind, owner, name, number: item.number }}
         label={`在 GitHub 打开${KIND_NAMES[kind]} #${item.number}`}
-        className="font-mono text-xs text-muted transition-colors hover:text-secondary hover:underline"
+        className="font-mono text-xs text-muted transition-colors duration-150 ease-out hover:text-secondary hover:underline active:text-primary"
       >
         #{item.number}
       </ExternalLinkButton>
@@ -86,7 +99,7 @@ interface IssuesAndPullsProps {
 /** 议题与合并请求的完整列表（「Issue & PR」Tab）：先给计数摘要，再分区展示。 */
 export function IssuesAndPulls({ issues, pullRequests, owner, name }: IssuesAndPullsProps) {
   if (issues.length === 0 && pullRequests.length === 0) {
-    return <p className="text-sm text-secondary">✓ 当前没有开放的 Issue 或 Pull Request</p>;
+    return <IssueEmptyState />;
   }
 
   return (

@@ -32,7 +32,7 @@ export function ErrorBar({ error, onGoSettings, action }: ErrorBarProps) {
         <button
           type="button"
           onClick={action.onClick}
-          className="shrink-0 rounded border border-default bg-surface/60 px-2 py-0.5 text-xs transition-colors hover:bg-surface"
+          className="inline-flex h-8 shrink-0 items-center rounded border border-default bg-surface/60 px-2 text-xs transition-colors duration-150 ease-out hover:bg-surface active:bg-surface-active"
         >
           {action.label}
         </button>
@@ -41,7 +41,7 @@ export function ErrorBar({ error, onGoSettings, action }: ErrorBarProps) {
         <button
           type="button"
           onClick={onGoSettings}
-          className="shrink-0 rounded border border-default bg-surface/60 px-2 py-0.5 text-xs transition-colors hover:bg-surface"
+          className="inline-flex h-8 shrink-0 items-center rounded border border-default bg-surface/60 px-2 text-xs transition-colors duration-150 ease-out hover:bg-surface active:bg-surface-active"
         >
           去设置
         </button>

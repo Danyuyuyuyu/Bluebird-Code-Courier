@@ -22,7 +22,7 @@ export function TrendPanel({ trend, scope, compact = false }: TrendPanelProps) {
 
   if (ordered.length === 0) {
     return (
-      <p className="rounded-md border border-dashed border-strong bg-surface/50 px-4 py-6 text-center text-xs text-muted">
+      <p className="rounded-md bg-surface-raised px-4 py-6 text-center text-xs text-muted">
         暂无趋势数据，完成更多抓取后这里会显示变化。
       </p>
     );
@@ -31,11 +31,11 @@ export function TrendPanel({ trend, scope, compact = false }: TrendPanelProps) {
   const [only] = ordered;
   if (only && ordered.length === 1) {
     return (
-      <div className="rounded-md border border-dashed border-strong bg-surface/50 px-4 py-4 text-xs">
+      <div className="rounded-md bg-surface-raised px-4 py-4 text-xs">
         <p className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-secondary">
           {METRICS.map((metric) => (
             <span key={metric}>
-              {METRIC_LABELS[metric]} <span className="font-mono text-primary">{formatCount(only[metric])}</span>
+              {METRIC_LABELS[metric]} <span className="font-semibold text-primary">{formatCount(only[metric])}</span>
             </span>
           ))}
         </p>

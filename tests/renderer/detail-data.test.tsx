@@ -1,9 +1,12 @@
 // @vitest-environment happy-dom
+import { act } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { CommitItem, IssueItem, PullRequestItem, ReleaseItem } from '../../src/shared/types';
 import { classifyReleaseTag, dedupeReleaseTitle } from '../../src/renderer/lib/release';
 import { CommitTab } from '../../src/renderer/components/detail/CommitTab';
 import { CommitList } from '../../src/renderer/components/detail/CommitList';
+import { DetailTabs } from '../../src/renderer/components/detail/DetailTabs';
+import type { DetailTabId } from '../../src/renderer/components/detail/DetailTabs';
 import { IssuesAndPulls } from '../../src/renderer/components/detail/IssuesAndPulls';
 import { IssuesTab } from '../../src/renderer/components/detail/IssuesTab';
 import { OverviewTab } from '../../src/renderer/components/detail/OverviewTab';
@@ -264,5 +267,31 @@ describe('议题与合并请求 · 有数据与无数据', () => {
     // 状态同样是文字
     expect(issueRow.textContent).toContain('开启');
     expect(pullRow.textContent).toContain('已关闭');
+  });
+});
+
+describe('详情页 Tab 键盘交互', () => {
+  it('方向键循环切换，Home / End 到首尾并保留焦点', async () => {
+    const changes: DetailTabId[] = [];
+    await render(<DetailTabs active="overview" onChange={(id) => changes.push(id)} />);
+
+    const pressOnTab = async (id: DetailTabId, key: string): Promise<void> => {
+      const button = document.querySelector<HTMLButtonElement>(`#detail-tab-${id}`);
+      if (!button) throw new Error(`Tab ${id} 未渲染`);
+      await act(async () => {
+        button.focus();
+        button.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+      });
+    };
+
+    await pressOnTab('overview', 'ArrowRight');
+    expect(document.activeElement?.id).toBe('detail-tab-releases');
+    await pressOnTab('releases', 'End');
+    expect(document.activeElement?.id).toBe('detail-tab-trend');
+    await pressOnTab('trend', 'Home');
+    expect(document.activeElement?.id).toBe('detail-tab-overview');
+    await pressOnTab('overview', 'ArrowLeft');
+    expect(document.activeElement?.id).toBe('detail-tab-trend');
+    expect(changes).toEqual(['releases', 'trend', 'overview', 'trend']);
   });
 });

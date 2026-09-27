@@ -55,7 +55,7 @@
   --color-info-soft: 232 245 254;
 
   /* Chart（完整色值，供 Chart.js 读取） */
-  --chart-grid: rgba(203, 213, 225, 0.7);
+  --chart-grid: rgba(203, 213, 225, 0.55);
   --chart-label: #5d697a;
   --chart-tooltip: #ffffff;
   --chart-tooltip-text: #172033;
@@ -105,7 +105,7 @@
   --color-info-soft: 12 40 58;
 
   /* Chart（完整色值，供 Chart.js 读取） */
-  --chart-grid: rgba(51, 65, 85, 0.5);
+  --chart-grid: rgba(51, 65, 85, 0.38);
   --chart-label: #94a3b8;
   --chart-tooltip: rgba(15, 23, 42, 0.95);
   --chart-tooltip-text: #e2e8f0;
@@ -121,10 +121,77 @@ body,
 
 body {
   @apply bg-app text-primary antialiased;
+  font-family: system-ui, "Segoe UI", sans-serif;
+}
+
+button:enabled {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* Chromium/Electron scrollbar stays visible but uses the active semantic palette. */
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgb(var(--color-app));
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid rgb(var(--color-app));
+  border-radius: 9999px;
+  background: rgb(var(--color-border-strong));
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--color-surface-active));
+}
+
+/* Small entrance only: mounted menus and popovers do not shift surrounding layout. */
+.overlay-enter {
+  animation: overlay-enter 140ms ease-out both;
+  transform-origin: top right;
+}
+
+@keyframes overlay-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Keep the row quiet while its own menu / confirmation surface is open. */
+.repo-row:has(.repo-actions-trigger[aria-expanded='true']):hover {
+  border-color: rgb(var(--color-border-subtle));
+  background-color: rgb(var(--color-surface));
 }
 
 /* 输入框与按钮的统一聚焦轮廓（两种主题下都用强调色） */
 *:focus-visible {
   outline: 2px solid rgb(var(--color-accent) / 0.7);
   outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .overlay-enter {
+    animation: none;
+    transform: none;
+  }
 }

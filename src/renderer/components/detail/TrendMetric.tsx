@@ -95,10 +95,10 @@ export function TrendMetric({ summary, scope, compact = false }: TrendMetricProp
   };
 
   return (
-    <section data-metric={metric} className="rounded-lg border border-default bg-surface p-4">
+    <section data-metric={metric} className="min-w-0 rounded-md bg-surface-raised p-3 sm:p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <h3 className="text-sm font-medium text-secondary">{label}</h3>
-        <span className="font-mono text-lg font-semibold text-primary">{formatCount(current)}</span>
+        <h3 className="text-sm font-semibold text-secondary">{label}</h3>
+        <span className="text-base font-semibold text-primary">{formatCount(current)}</span>
       </div>
 
       {/* 图表不是唯一信息来源：变化量与记录范围都以文本给出 */}

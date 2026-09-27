@@ -105,8 +105,8 @@ export function SettingsPage({ onSaved }: SettingsPageProps) {
   }
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-lg font-semibold text-primary">设置</h1>
+    <div className="max-w-[840px] space-y-4">
+      <h1 className="text-xl font-semibold text-primary">设置</h1>
 
       <SettingSection title="外观">
         <ThemeSelector />
@@ -121,7 +121,7 @@ export function SettingsPage({ onSaved }: SettingsPageProps) {
             </span>
           ) : (
             <span
-              className={`rounded-full border px-2.5 py-0.5 text-xs ${
+              className={`inline-flex h-5 items-center rounded-full border px-2 text-[11px] ${
                 configured
                   ? 'border-success/40 bg-success-soft text-success'
                   : 'border-warning/40 bg-warning-soft text-warning'
@@ -134,7 +134,7 @@ export function SettingsPage({ onSaved }: SettingsPageProps) {
             <button
               type="button"
               onClick={() => void accessTokenStateQuery.refetch()}
-              className="rounded border border-default px-2 py-0.5 text-xs text-secondary transition-colors hover:bg-surface-hover"
+              className="inline-flex h-8 items-center rounded border border-default px-2 text-xs text-secondary transition-colors duration-150 ease-out hover:bg-surface-hover active:bg-surface-active"
             >
               重新读取
             </button>
@@ -154,19 +154,19 @@ export function SettingsPage({ onSaved }: SettingsPageProps) {
                 onChange={(event) => setAccessToken(event.target.value)}
                 placeholder="ghp_…"
                 autoComplete="off"
-                className="w-full min-w-0 flex-1 rounded-md border border-strong bg-app px-3 py-2 font-mono text-sm text-primary placeholder:text-muted focus:border-accent focus:outline-none"
+                className="h-[38px] w-full min-w-0 flex-1 rounded-md border border-strong bg-app px-3 font-mono text-sm text-primary placeholder:text-muted transition-colors duration-150 ease-out focus:border-accent"
               />
               <button
                 type="button"
                 onClick={() => setRevealed((value) => !value)}
                 aria-pressed={revealed}
                 aria-label={revealed ? '隐藏令牌' : '显示令牌'}
-                className="shrink-0 rounded-md border border-default px-3 py-2 text-xs text-secondary transition-colors hover:bg-surface-hover"
+                className="h-9 shrink-0 rounded-md border border-default px-3 text-xs text-secondary transition-colors duration-150 ease-out hover:bg-surface-hover active:bg-surface-active"
               >
                 {revealed ? '隐藏' : '显示'}
               </button>
             </div>
-            <p className="mt-1.5 text-xs text-muted">
+            <p className="mt-2 text-xs text-muted">
               令牌只保存在本机，不会上传到任何服务器；已保存的令牌不会回显。
             </p>
           </div>
@@ -175,7 +175,8 @@ export function SettingsPage({ onSaved }: SettingsPageProps) {
             <button
               type="submit"
               disabled={saving}
-              className="flex items-center gap-2 rounded-md bg-accent-solid px-4 py-2 text-sm font-medium text-accent-contrast transition-colors hover:bg-accent-solid-hover disabled:cursor-not-allowed disabled:opacity-60"
+              aria-busy={saving}
+              className="flex h-9 min-w-28 items-center justify-center gap-2 rounded-md bg-accent-solid px-4 text-sm font-medium text-accent-contrast transition-colors duration-150 ease-out hover:bg-accent-solid-hover active:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {saving ? <Spinner className="h-3.5 w-3.5" /> : null}
               {saving ? '保存中…' : '保存并验证'}
@@ -184,7 +185,8 @@ export function SettingsPage({ onSaved }: SettingsPageProps) {
               type="button"
               onClick={() => void handleValidate()}
               disabled={validating}
-              className="flex items-center gap-2 rounded-md border border-default px-4 py-2 text-sm text-primary transition-colors hover:bg-surface-hover active:bg-surface-active disabled:cursor-not-allowed disabled:opacity-60"
+              aria-busy={validating}
+              className="flex h-9 min-w-28 items-center justify-center gap-2 rounded-md border border-default px-4 text-sm text-primary transition-colors duration-150 ease-out hover:bg-surface-hover active:bg-surface-active disabled:cursor-not-allowed disabled:opacity-60"
             >
               {validating ? <Spinner className="h-3.5 w-3.5" /> : null}
               {validating ? '连接中…' : '测试连接'}

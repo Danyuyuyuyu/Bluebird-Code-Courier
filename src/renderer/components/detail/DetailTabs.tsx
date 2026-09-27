@@ -20,7 +20,8 @@ export function DetailTabs({ active, onChange }: DetailTabsProps) {
     <div
       role="tablist"
       aria-label="仓库详情分区"
-      className="flex gap-1 overflow-x-auto border-b border-default"
+      aria-orientation="horizontal"
+      className="flex gap-2 overflow-x-auto border-b border-subtle"
     >
       {TABS.map((tab) => {
         const selected = tab.id === active;
@@ -30,13 +31,31 @@ export function DetailTabs({ active, onChange }: DetailTabsProps) {
             type="button"
             role="tab"
             id={`detail-tab-${tab.id}`}
+            tabIndex={selected ? 0 : -1}
             aria-selected={selected}
             aria-controls={`detail-panel-${tab.id}`}
             onClick={() => onChange(tab.id)}
-            className={`whitespace-nowrap border-b-2 px-3 py-2 text-sm transition-colors ${
+            onKeyDown={(event) => {
+              const currentIndex = TABS.findIndex((item) => item.id === tab.id);
+              let nextIndex: number | null = null;
+              if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % TABS.length;
+              if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + TABS.length) % TABS.length;
+              if (event.key === 'Home') nextIndex = 0;
+              if (event.key === 'End') nextIndex = TABS.length - 1;
+              if (nextIndex !== null) {
+                event.preventDefault();
+                const nextTab = TABS[nextIndex];
+                if (!nextTab) return;
+                event.currentTarget.parentElement
+                  ?.querySelector<HTMLButtonElement>(`#detail-tab-${nextTab.id}`)
+                  ?.focus();
+                onChange(nextTab.id);
+              }
+            }}
+            className={`h-10 whitespace-nowrap border-b-2 px-3 text-sm transition-colors duration-150 ease-out focus-visible:outline-offset-[-3px] ${
               selected
-                ? 'border-accent text-accent'
-                : 'border-transparent text-secondary hover:border-strong hover:text-primary'
+                ? 'border-accent font-semibold text-accent'
+                : 'border-transparent text-secondary hover:border-strong hover:text-primary active:bg-surface-active'
             }`}
           >
             {tab.label}

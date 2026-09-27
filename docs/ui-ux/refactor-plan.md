@@ -21,7 +21,8 @@
 | 11 | 构建状态组件 | 🔶 徽章语义与概览置顶已做；外链通道未建立 | ✅ 渲染层断言 | ⏳ TC-10 |
 | 12 | 公共组件 | 🔶 已提取 ThemeSelector / SettingSection / 详情与清单的列表组件；Button / Card 等未统一 | — | — |
 | 13 | 桌面布局 / 响应式 | 🔶 内容宽度 1152px、换行与横向滚动已就位 | ✅ 浏览器实测 | ⏳ TC-23、TC-24、TC-38 |
-| 14 | 最终视觉 Polish | ⬜ 未开始 | — | — |
+| 14A | Visual Foundation | ✅ 2026-09-27 | ✅ typecheck / 200 tests / build | ✅ Light / Dark 截图复核完成 |
+| 14B | Interaction & Micro Polish | ✅ 2026-09-27 | ✅ typecheck / 204 tests / build | ✅ Renderer 交互与响应式截图记录；Windows Electron Reduce Motion Smoke 留在 Full Manual Acceptance |
 
 ---
 

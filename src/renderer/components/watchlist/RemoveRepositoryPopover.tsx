@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Spinner } from '../Spinner';
 
 interface RemoveRepositoryPopoverProps {
+  id: string;
   fullName: string;
   /** 移除请求进行中：两个按钮都禁用，避免重复提交。 */
   busy: boolean;
@@ -13,6 +14,7 @@ interface RemoveRepositoryPopoverProps {
 
 /** 移除监控仓库的轻量确认 Popover：无倒计时、无二次点击，取消 / Esc / 点外部都能退出。 */
 export function RemoveRepositoryPopover({
+  id,
   fullName,
   busy,
   error,
@@ -28,9 +30,10 @@ export function RemoveRepositoryPopover({
 
   return (
     <div
+      id={id}
       role="dialog"
       aria-label="从监控清单移除仓库"
-      className="absolute right-0 top-full z-20 mt-1 w-72 rounded-lg border border-strong bg-surface p-3 shadow-md"
+      className="overlay-enter absolute right-0 top-full z-20 mt-1 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-strong bg-surface p-3 shadow-sm"
     >
       <p className="text-sm font-medium text-primary">从监控清单移除？</p>
       <p className="mt-1 break-all font-mono text-xs text-secondary">{fullName}</p>
@@ -48,7 +51,7 @@ export function RemoveRepositoryPopover({
           type="button"
           onClick={onCancel}
           disabled={busy}
-          className="rounded-md border border-default px-3 py-1.5 text-sm text-primary transition-colors hover:bg-surface-hover active:bg-surface-active disabled:cursor-not-allowed disabled:opacity-60"
+          className="h-9 rounded-md border border-default px-3 text-sm text-primary transition-colors duration-150 ease-out hover:bg-surface-hover active:bg-surface-active disabled:cursor-not-allowed disabled:opacity-60"
         >
           取消
         </button>
@@ -56,7 +59,8 @@ export function RemoveRepositoryPopover({
           type="button"
           onClick={onConfirm}
           disabled={busy}
-          className="flex items-center gap-2 rounded-md bg-danger-solid px-3 py-1.5 text-sm font-medium text-danger-contrast transition-colors hover:bg-danger-solid-hover disabled:cursor-not-allowed disabled:opacity-60"
+          aria-busy={busy}
+          className="flex h-9 min-w-[104px] items-center justify-center gap-2 rounded-md bg-danger-solid px-3 text-sm font-medium text-danger-contrast transition-colors duration-150 ease-out hover:bg-danger-solid-hover active:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {busy ? <Spinner className="h-3.5 w-3.5" /> : null}
           {busy ? '移除中…' : '移除'}

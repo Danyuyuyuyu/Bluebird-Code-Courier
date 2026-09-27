@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Glance } from '../../../shared/types';
 import { getApi } from '../../lib/api';
 import { describeOpenFailure } from '../../lib/external-link';
+import { Spinner } from '../Spinner';
 import { RemoveRepositoryPopover } from './RemoveRepositoryPopover';
 
 /** closed → 无浮层；menu → ··· 菜单；confirm → 移除确认 Popover。 */
@@ -21,6 +22,9 @@ export function RepositoryActions({ repo, onRemove }: RepositoryActionsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuItemRef = useRef<HTMLButtonElement>(null);
+  const removeMenuItemRef = useRef<HTMLButtonElement>(null);
+  const menuId = `repository-menu-${repo.id}`;
+  const popoverId = `repository-remove-${repo.id}`;
 
   const open = stage !== 'closed';
 
@@ -33,7 +37,31 @@ export function RepositoryActions({ repo, onRemove }: RepositoryActionsProps) {
       triggerRef.current?.focus();
     }
     function handleKeyDown(event: KeyboardEvent): void {
-      if (event.key === 'Escape' && !busy) close();
+      if (event.key === 'Escape' && !busy) {
+        close();
+        return;
+      }
+
+      if (stage !== 'menu') return;
+
+      if (event.key === 'Tab' && !busy) {
+        setStage('closed');
+        setError(null);
+        return;
+      }
+
+      const items = [menuItemRef.current, removeMenuItemRef.current];
+      const currentIndex = items.indexOf(document.activeElement as HTMLButtonElement | null);
+      let nextIndex: number | null = null;
+      if (event.key === 'ArrowDown') nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % items.length;
+      if (event.key === 'ArrowUp') nextIndex = currentIndex < 0 ? items.length - 1 : (currentIndex - 1 + items.length) % items.length;
+      if (event.key === 'Home') nextIndex = 0;
+      if (event.key === 'End') nextIndex = items.length - 1;
+
+      if (nextIndex !== null) {
+        event.preventDefault();
+        items[nextIndex]?.focus();
+      }
     }
     function handlePointerDown(event: MouseEvent): void {
       if (busy) return;
@@ -42,13 +70,22 @@ export function RepositoryActions({ repo, onRemove }: RepositoryActionsProps) {
         setError(null);
       }
     }
+    function handleFocusIn(event: FocusEvent): void {
+      if (busy) return;
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setStage('closed');
+        setError(null);
+      }
+    }
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('focusin', handleFocusIn);
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('focusin', handleFocusIn);
     };
-  }, [open, busy]);
+  }, [open, busy, stage]);
 
   // 菜单打开后把焦点交给菜单项
   useEffect(() => {
@@ -95,11 +132,15 @@ export function RepositoryActions({ repo, onRemove }: RepositoryActionsProps) {
       <button
         ref={triggerRef}
         type="button"
-        aria-haspopup="menu"
+        aria-haspopup={stage === 'confirm' ? 'dialog' : 'menu'}
         aria-expanded={open}
+        aria-controls={stage === 'confirm' ? popoverId : stage === 'menu' ? menuId : undefined}
         aria-label={`${repo.fullName} 的仓库操作`}
+        title={`${repo.fullName} 的仓库操作`}
         onClick={() => setStage(stage === 'closed' ? 'menu' : 'closed')}
-        className="rounded-md px-2 py-1 text-secondary transition-colors hover:bg-surface-hover hover:text-primary active:bg-surface-active"
+        className={`repo-actions-trigger inline-flex h-8 w-8 items-center justify-center rounded-md text-lg transition-colors duration-150 ease-out hover:bg-surface-hover hover:text-primary active:bg-surface-active ${
+          open ? 'bg-surface-active text-primary' : 'text-secondary'
+        }`}
       >
         ···
       </button>
@@ -107,28 +148,36 @@ export function RepositoryActions({ repo, onRemove }: RepositoryActionsProps) {
       {stage === 'menu' ? (
         <div
           role="menu"
+          id={menuId}
           aria-label="仓库操作"
-          className="absolute right-0 top-full z-20 mt-1 w-44 rounded-md border border-strong bg-surface py-1 shadow-md"
+          aria-busy={busy}
+          className="overlay-enter absolute right-0 top-full z-20 mt-1 w-44 max-w-[calc(100vw-2rem)] rounded-lg border border-strong bg-surface py-1 shadow-sm"
         >
           <button
             ref={menuItemRef}
             type="button"
+            tabIndex={0}
             role="menuitem"
             aria-label={`在 GitHub 打开 ${repo.fullName}`}
             onClick={() => void handleOpenExternal()}
-            className="block w-full px-3 py-1.5 text-left text-sm text-primary transition-colors hover:bg-surface-hover active:bg-surface-active"
+            disabled={busy}
+            className="flex min-h-9 w-full items-center gap-2 px-3 text-left text-sm text-primary transition-colors duration-150 ease-out hover:bg-surface-hover active:bg-surface-active disabled:cursor-not-allowed disabled:opacity-60"
           >
-            在 GitHub 打开
+            {busy ? <Spinner className="h-3.5 w-3.5" /> : null}
+            {busy ? '打开中…' : '在 GitHub 打开'}
           </button>
           <div role="separator" className="my-1 border-t border-subtle" />
           <button
+            ref={removeMenuItemRef}
             type="button"
+            tabIndex={-1}
             role="menuitem"
             onClick={() => {
               setError(null);
               setStage('confirm');
             }}
-            className="block w-full px-3 py-1.5 text-left text-sm text-primary transition-colors hover:bg-surface-hover active:bg-surface-active"
+            disabled={busy}
+            className="flex min-h-9 w-full items-center px-3 text-left text-sm text-danger transition-colors duration-150 ease-out hover:bg-danger-soft active:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-60"
           >
             从监控清单移除
           </button>
@@ -142,6 +191,7 @@ export function RepositoryActions({ repo, onRemove }: RepositoryActionsProps) {
 
       {stage === 'confirm' ? (
         <RemoveRepositoryPopover
+          id={popoverId}
           fullName={repo.fullName}
           busy={busy}
           error={error}

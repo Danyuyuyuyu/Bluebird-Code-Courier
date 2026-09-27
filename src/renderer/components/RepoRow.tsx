@@ -19,23 +19,20 @@ interface RepoRowProps {
  */
 export function RepoRow({ repo, onOpen, onRemove, refreshing }: RepoRowProps) {
   return (
-    <li className="rounded-lg border border-default bg-surface transition-colors duration-150 hover:border-strong hover:bg-surface-hover">
-      <div className="flex items-start gap-2 p-3 sm:p-4">
+    <li className="repo-row rounded-lg border border-subtle bg-surface transition-colors duration-150 ease-out hover:border-strong hover:bg-surface-hover">
+      <div className="flex items-start gap-2 p-4">
         <button
           type="button"
           onClick={() => onOpen(repo)}
           aria-label={`查看 ${repo.fullName} 详情`}
-          className="min-w-0 flex-1 rounded-md text-left"
+          title={repo.fullName}
+          className="min-w-0 flex-1 rounded-md text-left transition-colors duration-150 ease-out focus-visible:bg-surface-hover active:bg-surface-active"
         >
-          <span className="block truncate font-mono text-base font-medium text-primary">
+          <span className="block min-w-0 truncate font-mono text-lg font-semibold leading-8 text-primary">
             {repo.fullName}
           </span>
-          <span className="mt-1 block text-xs text-muted">
-            抓取于 {repo.fetchedAt ? formatRelativeTime(repo.fetchedAt) : '尚未抓取'}
-            {refreshing ? <span className="text-secondary"> · 正在更新…</span> : null}
-          </span>
-          <span className="mt-3 flex flex-wrap items-baseline gap-x-6 gap-y-2">
-            <GlanceFact label="Stars" value={formatCount(repo.stars)} mono />
+          <span className="mt-2 flex flex-wrap items-baseline gap-x-5 gap-y-2">
+            <GlanceFact label="Stars" value={formatCount(repo.stars)} />
             <GlanceFact
               label="最近活动"
               value={repo.pushedAt ? formatRelativeTime(repo.pushedAt) : '—'}
@@ -47,6 +44,10 @@ export function RepoRow({ repo, onOpen, onRemove, refreshing }: RepoRowProps) {
               mono
               muted={repo.latestReleaseTag === null}
             />
+          </span>
+          <span className="mt-1 block text-xs text-muted">
+            抓取于 {repo.fetchedAt ? formatRelativeTime(repo.fetchedAt) : '尚未抓取'}
+            {refreshing ? <span className="text-secondary"> · 正在更新…</span> : null}
           </span>
         </button>
 

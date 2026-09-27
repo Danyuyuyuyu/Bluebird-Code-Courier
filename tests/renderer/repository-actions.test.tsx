@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { act } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { RenderResult, StubHandle, StubOptions } from './helpers';
 import {
@@ -42,6 +43,12 @@ async function openConfirm(): Promise<void> {
   await settle();
 }
 
+async function pressKey(element: HTMLElement, key: string): Promise<void> {
+  await act(async () => {
+    element.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+  });
+}
+
 afterEach(async () => {
   if (view) {
     await view.unmount();
@@ -82,7 +89,38 @@ describe('仓库操作 · 入口', () => {
     await openMenu();
     await pressEscape();
     expect(menu()).toBeNull();
+    expect(document.activeElement).toBe(repoActionsButton(FULL_NAME));
     expect(handle.calls.removeRepository).toBe(0);
+  });
+
+  it('菜单使用方向键、Home 和 End 移动焦点', async () => {
+    await mount();
+    await openMenu();
+    const openItem = menuItem('在 GitHub 打开');
+    const removeItem = menuItem('从监控清单移除');
+    expect(document.activeElement).toBe(openItem);
+
+    if (!openItem || !removeItem) throw new Error('菜单项未渲染');
+    await pressKey(openItem, 'ArrowDown');
+    expect(document.activeElement).toBe(removeItem);
+    await pressKey(removeItem, 'ArrowUp');
+    expect(document.activeElement).toBe(openItem);
+    await pressKey(openItem, 'End');
+    expect(document.activeElement).toBe(removeItem);
+    await pressKey(removeItem, 'Home');
+    expect(document.activeElement).toBe(openItem);
+  });
+
+  it('Tab 离开菜单时收起菜单', async () => {
+    await mount();
+    await openMenu();
+    const openItem = menuItem('在 GitHub 打开');
+    if (!openItem) throw new Error('菜单项未渲染');
+
+    await pressKey(openItem, 'Tab');
+
+    expect(menu()).toBeNull();
+    expect(handle.calls.fetchDetail).toBe(0);
   });
 
   it('点击菜单外部关闭菜单', async () => {
@@ -90,6 +128,20 @@ describe('仓库操作 · 入口', () => {
     await openMenu();
     await pointerDownOutside(document.body);
     expect(menu()).toBeNull();
+  });
+
+  it('键盘焦点移出菜单时收起菜单并保留新的焦点位置', async () => {
+    await mount();
+    await openMenu();
+    const repoButton = repoOpenButton(FULL_NAME);
+    if (!repoButton) throw new Error('仓库详情按钮未渲染');
+
+    await act(async () => repoButton.focus());
+    await settle();
+
+    expect(menu()).toBeNull();
+    expect(document.activeElement).toBe(repoButton);
+    expect(handle.calls.fetchDetail).toBe(0);
   });
 });
 
@@ -127,6 +179,7 @@ describe('仓库操作 · 移除确认 Popover', () => {
     await settle();
 
     expect(dialog()).toBeNull();
+    expect(document.activeElement).toBe(repoActionsButton(FULL_NAME));
     expect(handle.calls.removeRepository).toBe(0);
     expect(repoRows()).toHaveLength(1);
   });

@@ -21,7 +21,7 @@ export function WatchlistHeader({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h1 className="text-lg font-semibold text-primary">监控清单</h1>
+        <h1 className="text-xl font-semibold text-primary">监控清单</h1>
         {repositoryCount !== null ? (
           <span className="text-sm text-secondary">{repositoryCount} 个仓库</span>
         ) : null}
@@ -33,7 +33,8 @@ export function WatchlistHeader({
           type="button"
           onClick={onRefresh}
           disabled={refreshing}
-          className="ml-auto flex shrink-0 items-center gap-2 rounded-md border border-accent/40 bg-accent-soft px-3 py-2 text-sm text-accent transition-colors hover:border-accent/70 hover:bg-accent-soft/70 disabled:cursor-not-allowed disabled:opacity-60"
+          aria-busy={refreshing}
+          className="ml-auto flex h-9 min-w-26 shrink-0 items-center justify-center gap-2 rounded-md border border-accent/40 bg-accent-soft px-3 text-sm text-accent transition-colors duration-150 ease-out hover:border-accent/70 hover:bg-accent-soft/70 active:bg-surface-active disabled:cursor-not-allowed disabled:opacity-60"
         >
           {refreshing ? <Spinner className="h-3.5 w-3.5" /> : null}
           {refreshing ? '刷新中…' : '全部刷新'}
