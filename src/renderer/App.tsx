@@ -61,6 +61,9 @@ export function App() {
   }
 
   const activeView: View = configured ? view : 'settings';
+  // 读不到任何状态才整页阻断；已有缓存时后台刷新失败不应把界面清空
+  const tokenStateFailed = accessTokenStateQuery.isError;
+  const hasTokenState = accessTokenStateQuery.data !== undefined;
 
   let content;
   if (accessTokenStateQuery.isPending) {
@@ -70,7 +73,7 @@ export function App() {
         正在启动…
       </div>
     );
-  } else if (accessTokenStateQuery.isError) {
+  } else if (tokenStateFailed && !hasTokenState) {
     content = (
       <div className="mx-auto max-w-xl space-y-3 py-10">
         <ErrorBar
@@ -145,6 +148,14 @@ export function App() {
             className="mb-4 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200"
           >
             {notice}
+          </div>
+        ) : null}
+        {tokenStateFailed && hasTokenState ? (
+          <div className="mb-4">
+            <ErrorBar
+              error={{ kind: 'unknown', message: '访问令牌状态刷新失败，正在沿用上次读取的状态' }}
+              action={{ label: '重试', onClick: () => void accessTokenStateQuery.refetch() }}
+            />
           </div>
         ) : null}
         {content}

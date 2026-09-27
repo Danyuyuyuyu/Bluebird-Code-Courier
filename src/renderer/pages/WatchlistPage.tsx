@@ -89,6 +89,8 @@ export function WatchlistPage({ onOpenDetail, onGoSettings }: WatchlistPageProps
   }
 
   const repositories: Glance[] = listQuery.data ?? [];
+  /** 加载失败且没有任何缓存数据：只显示错误条，不能再显示空态（否则被误读成清单被清空）。 */
+  const listUnavailable = listQuery.isError && !listQuery.data;
 
   return (
     <div className="space-y-4">
@@ -141,7 +143,7 @@ export function WatchlistPage({ onOpenDetail, onGoSettings }: WatchlistPageProps
 
       {listQuery.isPending && !listQuery.data ? (
         <Loading label="正在加载监控清单…" />
-      ) : repositories.length === 0 ? (
+      ) : listUnavailable ? null : repositories.length === 0 ? (
         <EmptyState title="还没有监控仓库，输入 owner/repo 或 GitHub 网址开始跟踪" />
       ) : (
         <div className={`space-y-2 transition-opacity ${listQuery.isFetching || refreshing ? 'opacity-60' : ''}`}>
