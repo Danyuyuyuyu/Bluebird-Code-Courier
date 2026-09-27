@@ -161,6 +161,14 @@ export function DetailPage({ repositoryId, fullName, onBack, onGoSettings }: Det
         return { detail: null, error: { kind: 'unknown', message: '抓取全量信息失败，请稍后重试' } };
       }
     },
+    // 详情是全应用唯一会打 GitHub 网络、且带副作用的查询（一次抓取 = 4 次 API 调用 + 写当日快照）。
+    // 所以它不进任何自动重取通道：只有首次进入（无缓存）和用户点「重新抓取」才真正请求。
+    // gcTime 必须一并放开，否则缓存 5 分钟被回收后再进入会被当成"首次进入"而重抓。
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   // 抓取失败时保留上一次成功加载的全量信息（按仓库归属，切换仓库时不串数据）
