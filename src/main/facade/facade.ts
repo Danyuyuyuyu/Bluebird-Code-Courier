@@ -15,6 +15,7 @@ import type {
   AccessTokenState,
 } from '../../shared/types';
 import { normalizeError } from './errors';
+import { normalizeThemePreference, THEME_PREFERENCE_KEY } from '../../shared/theme';
 import { parseRepoInput } from '../features/repo-input';
 import {
   readAccessToken,
@@ -81,8 +82,13 @@ export function createFacade(deps: FacadeDeps): OctoFacade {
   }
 
   function settingsView(): SettingsView {
+    const preferences = readPreferences(db);
+    // 主题值只可能是三档之一：库里若有脏值，读出来也按 system 呈现
+    if (THEME_PREFERENCE_KEY in preferences) {
+      preferences[THEME_PREFERENCE_KEY] = normalizeThemePreference(preferences[THEME_PREFERENCE_KEY]);
+    }
     return {
-      preferences: readPreferences(db),
+      preferences,
       accessTokenConfigured: readAccessToken(db, cipher) !== null,
     };
   }
@@ -129,6 +135,10 @@ export function createFacade(deps: FacadeDeps): OctoFacade {
       if (cleaned === null) {
         logger.error('忽略格式非法的偏好项补丁（值必须是字符串）', patch);
         return Promise.resolve(settingsView());
+      }
+      // 主题值限定为 system/light/dark，非法值回退 system，不让脏值落库
+      if (THEME_PREFERENCE_KEY in cleaned) {
+        cleaned[THEME_PREFERENCE_KEY] = normalizeThemePreference(cleaned[THEME_PREFERENCE_KEY]);
       }
       writePreferences(db, cleaned);
       return Promise.resolve(settingsView());

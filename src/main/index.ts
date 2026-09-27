@@ -7,6 +7,7 @@ import { systemClock } from './core/clock';
 import { createHttpGitHub } from './core/github/http-github';
 import { createFacade } from './facade/facade';
 import { registerIpc } from './ipc';
+import { applyThemeSource } from './theme';
 
 /**
  * Electron 主进程：承载服务层（core + features），经白名单 IPC 暴露用例门面。
@@ -65,7 +66,7 @@ if (!app.requestSingleInstanceLock()) {
 
   void app
     .whenReady()
-    .then(() => {
+    .then(async () => {
       const userData = app.getPath('userData');
       const logger = createFileLogger(path.join(userData, 'logs'));
       logger.info('主进程启动');
@@ -78,6 +79,8 @@ if (!app.requestSingleInstanceLock()) {
         logger,
       });
       registerIpc(facade);
+      // 建窗口之前先落地主题偏好：首屏就按用户选的主题绘制，不闪一下再切
+      applyThemeSource((await facade.getSettings()).preferences);
       createWindow();
       logger.info('窗口已创建');
 

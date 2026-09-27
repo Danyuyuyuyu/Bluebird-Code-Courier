@@ -9,8 +9,8 @@ interface SectionProps {
 /** 全量信息里的一个更新类别区块。 */
 export function Section({ title, children }: SectionProps) {
   return (
-    <section className="rounded-lg border border-slate-800 bg-slate-900 p-4">
-      <h2 className="mb-3 text-sm font-semibold text-slate-300">{title}</h2>
+    <section className="rounded-lg border border-default bg-surface p-4">
+      <h2 className="mb-3 text-sm font-semibold text-primary">{title}</h2>
       {children}
     </section>
   );

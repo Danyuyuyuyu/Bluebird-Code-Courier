@@ -60,30 +60,54 @@ npm run dist
 2. 粘贴进设置页的输入框，点「保存并验证」。
 3. 保存前会调用 `GET /user` 验证，**验证通过才落库**；失败会给出明确提示。
 
-令牌用操作系统钥匙串（Electron `safeStorage`）加密后存本机，明文不落库、不写日志。
+令牌用操作系统钥匙串（Electron `safeStorage`）加密后存本机，明文不落库、不写日志。设置页的「显示 / 隐藏」只作用于你当前输入的值——**已保存的令牌不会回显**，主进程不提供取回明文的通道。
+
+# 🎨 外观与主题
+
+设置页的「外观」分组里可以三选一：
+
+| 选项 | 行为 |
+|---|---|
+| **跟随系统**（默认） | Windows 切换深色 / 浅色时 OCTO 立即跟随，无需重启 |
+| 浅色 | 强制浅色，系统切深色也不影响 |
+| 深色 | 强制深色，系统切浅色也不影响 |
+
+- 选择**即时生效、即时保存**，没有额外的「保存主题」按钮；保存失败会就地报错并回滚选择，不会假装已生效。
+- 偏好存在本地数据库的 `setting` 表（`pref:theme`），重启后保留。
+- 首屏不闪：窗口创建前主进程已把偏好交给 Electron（`nativeTheme.themeSource`），渲染层在 HTML 解析阶段就定好主题。
+- 两套主题共用一份语义配色（surface / border / text / accent / 状态色 / 图表色），组件不判断深浅，只写语义；趋势图会随主题立即重绘。
 
 # 📋 日常使用
 
 ## 🎯 监控清单（轻量信息）
 
+清单页是应用首页：标题右侧显示**当前监控仓库数量**，下面是「添加仓库」操作组与「全部刷新」。
+
 - 输入 `owner/repo`、GitHub 网址或 `git@github.com:owner/name` 均可加入。**加入前会先真实抓取验证**，不存在或无权访问的仓库不会入列。
 - 重复添加会被拒收（大小写不敏感）。
-- 每行显示三条**轻量信息**：⭐ star 数、🕒 最近动态时间（7 天内高亮）、🏷 最新发版标签（没有就显示"无发版"）。
-- 启动时自动抓取一次；之后用「重新抓取」手动刷新。
-- **清单数据在 60 秒内视为新鲜**：窗口切回前台、在清单与详情之间来回切换都**不会**自动重抓；超过 60 秒后重进清单只会后台重读一次本地库（不消耗配额）。需要新数据时点「重新抓取」。
-- 删除是两步确认（再点一次），4 秒不操作会自动取消。
+- 每张仓库卡片三层信息：**仓库全名**（第一层级）→ **Stars / 最近活动 / 最新版本**（第二层级，最近 7 天有活动的「最近活动」会高亮）→ **抓取于 …**（第三层级，弱化文字）。
+- 点卡片主区域（或键盘 Tab 选中后按 Enter / Space）进入该仓库详情。
+- 卡片右上角 `···` 是操作入口，**删除不再常驻在卡片上**：`···` → 从监控清单移除 → 轻量确认框（取消 / Esc / 点外部都能退出，确认时才出现红色按钮）。这只会停止在 OCTO 中监控，不会删除 GitHub 仓库。
+- 启动时自动抓取一次；之后用「全部刷新」手动刷新整份清单。
+- **刷新不会让已有数据“变灰”**：卡片照常可读，只有刷新按钮转圈、卡片抓取时间后显示「· 正在更新…」。刷新失败时旧列表继续显示，只多一条错误条。
+- **清单数据在 60 秒内视为新鲜**：窗口切回前台、在清单与详情之间来回切换都**不会**自动重抓；超过 60 秒后重进清单只会后台重读一次本地库（不消耗配额）。需要新数据时点「全部刷新」。
 
 ## 📊 全量信息（五类更新）
 
-点开清单里任意一行，按类别分区展示：
+**顶级入口只有两个：监控清单、设置**；仓库详情是监控清单的下一层——点开清单里任意一行进入，页头用「← 返回监控清单」退回。
 
-| 类别 | 展示内容 |
+详情页第一屏是仓库表头：仓库名、抓取时间、重新抓取按钮，以及四条核心指标（Stars / Forks / 最近活动 / 最新版本）。表头之下是六个二级 Tab，默认停在**概览**：
+
+| Tab | 展示内容 |
 |---|---|
-| 🏷 发版 | 标签、标题、发布日期 |
-| 📝 提交 | SHA、消息、作者、时间 |
-| 💬 议题与合并请求 | 分为「议题」「合并请求」两个子区，各含状态（开启 / 已关闭）、作者、更新时间 |
-| 🏗 构建状态 | 状态徽章（构建通过 / 构建失败 / 构建中 / 无结论 / 无构建）、工作流名、完成时间 |
-| 📈 星标趋势 | star 与 fork 双折线 |
+| 概览 | 构建状态（高权重）、最近 5 条发版、最近 5 条提交、Issue / PR 摘要（都为空时只给一行紧凑提示）、趋势摘要 |
+| 🏷 发版 | 完整发版列表：标签、标题、发布日期 |
+| 📝 提交 | 完整提交列表：消息在前，作者 · 时间次之，SHA 最后 |
+| 💬 Issue & PR | 分为「议题」「合并请求」两个子区，各含状态（开启 / 已关闭）、作者、更新时间 |
+| 🏗 构建 | 最近一次构建：状态徽章（构建通过 / 构建失败 / 构建中 / 无结论 / 无构建）、工作流名、完成时间、原始结论 |
+| 📈 趋势 | 完整 star 与 fork 双折线 |
+
+概览与各 Tab 用的是**同一次抓取的数据**，切 Tab 不产生任何 GitHub 请求。
 
 **详情页不会自动重取**：全量信息是全应用唯一会打 GitHub 网络、且会写当日快照的查询，因此它的缓存整个运行期保留、永不判为过期——来回切换页面、窗口获焦、断网重连都只显示上次抓到的结果，只有**首次打开**和点「重新抓取」才真正请求（一次 4 次调用）。缓存里的内容是上次抓取那一刻的，表头会标出「抓取于 …」。
 
@@ -134,8 +158,8 @@ npm run dist
 |---|---|
 | 🖥 桌面壳 | Electron 44（主进程 CJS + preload 沙箱 + contextIsolation） |
 | ⚙ 主进程 | TypeScript、better-sqlite3（本地 SQLite） |
-| 🎨 渲染进程 | React 18、Vite 8、Tailwind CSS 3、TanStack Query v5、Chart.js 4 |
-| 🔬 测试 | Vitest 5（node 环境、threads） |
+| 🎨 渲染进程 | React 18、Vite 8、Tailwind CSS 3（语义 Design Token + 双主题）、TanStack Query v5、Chart.js 4 |
+| 🔬 测试 | Vitest 5（主进程 node 环境 + 渲染层 happy-dom） |
 | 📦 打包 | electron-builder → Windows NSIS（x64） |
 
 ## 🏗 架构
@@ -159,8 +183,9 @@ core      ← 基础设施：db / github(REST 适配器) / cipher / clock / logg
 - **依赖方向单向**：`core` 不依赖 `features`，`features` 之间不互相引用，`facade` 是唯一用例边界（测试也只测这个边界）。
 - **契约在 `src/shared/`**：`types.ts` 定义领域类型与 `OctoFacade`，`ipc.ts` 定义通道常量；preload 内联通道字面量并用字面量类型锁定，与主进程漂移即编译报错。
 - **全依赖注入**：`createFacade({ db, github, cipher, clock, logger })`——GitHub 适配器、加密盒、时钟、日志都可替换，这也是测试得以完全离线的原因。
-- **无推送**：全部为 `ipcMain.handle` 请求/响应，没有 `webContents.send` 主动推送。
+- **无推送**：全部为 `ipcMain.handle` 请求/响应，没有 `webContents.send` 主动推送。主题因此**不新增通道**：主进程把偏好交给 Electron（`nativeTheme.themeSource`），渲染层从已有 `getSettings` 读偏好、用 `prefers-color-scheme` 感知系统变化。
 - **时间统一 UTC ISO8601 存储**，展示层转相对时间；`snapshot.day` 用本地日期做去重键。
+- **渲染层配色走语义 Token**：`styles.css` 里 `--color-*` 存 RGB 通道（浅色在 `:root`、深色在 `[data-theme='dark']`），`tailwind.config.js` 映射成 `bg-surface` / `text-muted` / `border-default` / `bg-accent-solid` 等语义类。组件不写 `dark:` 前缀、不出现具体色号；图表色（`--chart-*`）由 `resolveChartPalette` 读取后交给 Chart.js。
 - **全量数据不落库**：只有轻量展示字段与每日快照持久化。
 
 ## 📌 前置要求
@@ -219,7 +244,7 @@ icacls node_modules\electron\dist /setintegritylevel "(OI)(CI)Medium" /T /C
 
 要点：
 
-- **全量抓取 = 每仓库 4 次调用**（发版 + 提交 + 议题与 PR + 构建）。清单页的「重新抓取」只走轻量（2 次），详情页的「重新抓取」才走全量。
+- **全量抓取 = 每仓库 4 次调用**（发版 + 提交 + 议题与 PR + 构建）。清单页的「全部刷新」只走轻量（2 次），详情页的「重新抓取」才走全量。
 - `/releases/latest` 的 **404 被吞掉、视为「无发版」**，不算错误。
 - **限流不做主动探测**，只在出错时反应式判定：`429`，或 `403` 且 `x-ratelimit-remaining: 0`，或响应带 `retry-after`；恢复时间优先取 `x-ratelimit-reset`（epoch 秒）。
 - 清单批量抓取**并发 5**（`GLANCE_CONCURRENCY`）；令牌失效 / 限流会**中止后续波次**且同类错误只上报一次。
@@ -232,16 +257,17 @@ icacls node_modules\electron\dist /setintegritylevel "(OI)(CI)Medium" /T /C
 ```
 src/
 ├─ main/
-│  ├─ index.ts            组合根：logger → db → facade → ipc → window
-│  ├─ ipc.ts              10 个白名单通道注册
+│  ├─ index.ts            组合根：logger → db → facade → ipc → theme → window
+│  ├─ ipc.ts              10 个白名单通道注册（偏好落库后同步 nativeTheme）
+│  ├─ theme.ts            主题偏好 → nativeTheme.themeSource
 │  ├─ facade/             用例门面 + 错误归一
 │  ├─ features/           watchlist / fetching / snapshots / settings / repo-input
 │  └─ core/               db / github(port + http 适配器) / cipher / clock / logging
 ├─ preload/index.ts       contextBridge 暴露 window.octo
 ├─ renderer/              React UI：App + pages/ + components/ + lib/
-└─ shared/                跨进程契约：types.ts + ipc.ts
+└─ shared/                跨进程契约：types.ts + ipc.ts + theme.ts（偏好取值与 effective 主题判定）
 
-tests/                    Vitest 集成测试（含 helpers/ 与 manual-acceptance/）
+tests/                    Vitest 测试（facade/ 门面集成、db/、preload/、renderer/ DOM 交互、helpers/、manual-acceptance/）
 docs/adr/                 架构决策记录
 docs/agents/              仓库工程约定（domain / issue-tracker / triage-labels）
 .agents/                  第三方 Agent 技能集（本机保留，不入库）
@@ -255,7 +281,7 @@ tools/compat/             沙箱兼容垫片
 npm test   # = build:main + vitest run
 ```
 
-**策略：以门面集成测试为主，另有两个适配器的窄缝直测**（`core/db` 的建表与迁移、`core/github/http-github` 的请求层）以及 preload 构建产物。门面用例只断言返回值与数据库落档，不测内部调用顺序、私有状态与 UI 结构。
+**策略：以门面集成测试为主，另有两个适配器的窄缝直测**（`core/db` 的建表与迁移、`core/github/http-github` 的请求层）、preload 构建产物，以及渲染层的 DOM 交互测试。门面用例只断言返回值与数据库落档，不测内部调用顺序、私有状态与 UI 结构。
 
 | 组件 | 真/假 |
 |---|---|
@@ -264,11 +290,13 @@ npm test   # = build:main + vitest run
 | GitHub 网络层 | 🎭 假（录制 fixtures，含限流 / 401 / 404 / 网络 / 未知错误） |
 | 加密盒、时钟 | 🎭 假（可逆 base64；时钟默认本地正午，保证跨时区稳定）。令牌保存用例另注入**真实加密盒**，覆盖系统安全存储不可用 |
 
-覆盖：数据库建表与升级迁移（含 WAL 与 busy_timeout）、令牌校验保存（含系统安全存储不可用）、清单增删与输入归一、门面入参守卫（错型入参不穿出引擎错误）、轻量抓取、抓取落库的事务原子性、全量五类与构建结论归一、快照日档去重、错误归一与降级、请求超时。
+覆盖：数据库建表与升级迁移（含 WAL 与 busy_timeout）、令牌校验保存（含系统安全存储不可用）、清单增删与输入归一、门面入参守卫（错型入参不穿出引擎错误）、轻量抓取、抓取落库的事务原子性、全量五类与构建结论归一、快照日档去重、错误归一与降级、请求超时、主题偏好归一（非法值回退 system）。
 
 另有一个特殊回归测试 `tests/preload/preload-sandbox.test.ts`：直接执行编译产物 `dist/main/preload/index.js`，用沙箱 `require` 白名单（`electron/events/timers/url`）复现 Electron ≥20 的限制，断言通道名与 `src/shared/ipc.ts` 逐字一致。
 
-**UI 不写单测**，由 [`tests/manual-acceptance/`](tests/manual-acceptance/README.md) 的人工验收矩阵覆盖。
+**渲染层交互测试**（`tests/renderer/`，文件头 `@vitest-environment happy-dom`）覆盖两组契约。清单侧：仓库数量、点击卡片进详情、`···` 菜单不会误触进详情、菜单开关与 Esc / 外部点击关闭、移除确认 Popover 的取消与确认、移除失败保留仓库并可重试、刷新期间与刷新失败时缓存列表仍在、读取失败不误显示空态、空态只在真实 0 仓库时出现、互动不额外触发全量抓取。主题与设置侧：默认跟随系统、三档切换与偏好落库、保存失败回滚并报错、非法值回退 system、强制模式不跟随系统变化、系统主题运行时切换即时生效、主题切换不触发任何抓取、图表配色随主题重算、浅色下清单/详情/Popover 照常可用且不含硬编码调色板类、令牌状态与保存/测试连接行为。断言对象是 DOM 结构与门面调用计数（`role` / `aria-*` / 可见文案 / `data-theme`），不依赖具体色值。
+
+整机行为（Electron 壳、真实 GitHub 网络、窗口尺寸）仍由 [`tests/manual-acceptance/`](tests/manual-acceptance/README.md) 的人工验收矩阵覆盖。
 
 ## 💾 打包
 

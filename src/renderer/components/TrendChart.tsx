@@ -10,46 +10,57 @@ import {
 import type { ChartOptions } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import type { Snapshot } from '../../shared/types';
+import { resolveChartPalette } from '../lib/chart-theme';
+import type { ChartPalette } from '../lib/chart-theme';
+import { useEffectiveTheme } from '../lib/theme';
 import { formatShortDate } from '../lib/time';
 
 // 只注册实际用到的 chart.js 模块
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
 
-const OPTIONS: ChartOptions<'line'> = {
-  responsive: true,
-  maintainAspectRatio: false,
-  interaction: { mode: 'index', intersect: false },
-  plugins: {
-    legend: {
-      position: 'bottom',
-      labels: { color: '#94a3b8', boxWidth: 12, boxHeight: 12 },
+/** 坐标轴、图例、提示框的配色全部来自当前主题，主题切换时随 effective theme 重建。 */
+function chartOptions(palette: ChartPalette): ChartOptions<'line'> {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: { color: palette.label, boxWidth: 12, boxHeight: 12 },
+      },
+      tooltip: {
+        backgroundColor: palette.tooltip,
+        titleColor: palette.tooltipText,
+        bodyColor: palette.tooltipText,
+        borderColor: palette.grid,
+        borderWidth: 1,
+      },
     },
-    tooltip: {
-      backgroundColor: 'rgba(15,23,42,0.95)',
-      titleColor: '#e2e8f0',
-      bodyColor: '#cbd5e1',
-      borderColor: 'rgba(100,116,139,0.4)',
-      borderWidth: 1,
+    scales: {
+      x: {
+        ticks: { color: palette.label, maxRotation: 0, autoSkip: true },
+        grid: { color: palette.grid },
+      },
+      y: {
+        ticks: { color: palette.label },
+        grid: { color: palette.grid },
+      },
     },
-  },
-  scales: {
-    x: {
-      ticks: { color: '#64748b', maxRotation: 0, autoSkip: true },
-      grid: { color: 'rgba(51,65,85,0.4)' },
-    },
-    y: {
-      ticks: { color: '#64748b' },
-      grid: { color: 'rgba(51,65,85,0.4)' },
-    },
-  },
-};
+  };
+}
 
 interface TrendChartProps {
   trend: Snapshot[];
+  /** 概览摘要里压低高度，完整趋势仍在「趋势」Tab。 */
+  compact?: boolean;
 }
 
 /** 星标趋势：历史快照序列上的 star / fork 两条折线。 */
-export function TrendChart({ trend }: TrendChartProps) {
+export function TrendChart({ trend, compact = false }: TrendChartProps) {
+  const theme = useEffectiveTheme();
+  const palette = resolveChartPalette(theme);
+
   // 快照应按时间升序；入参顺序不保证，这里自行排序
   const ordered = [...trend].sort((a, b) => {
     const ta = new Date(a.capturedAt).getTime();
@@ -59,7 +70,7 @@ export function TrendChart({ trend }: TrendChartProps) {
 
   if (ordered.length < 2) {
     return (
-      <div className="rounded-md border border-dashed border-slate-700 bg-slate-900/50 px-4 py-6 text-center text-xs text-slate-500">
+      <div className="rounded-md border border-dashed border-strong bg-surface/50 px-4 py-6 text-center text-xs text-muted">
         趋势随使用积累，多用几天就有啦
       </div>
     );
@@ -71,16 +82,16 @@ export function TrendChart({ trend }: TrendChartProps) {
       {
         label: 'star 数',
         data: ordered.map((snapshot) => snapshot.stars),
-        borderColor: '#34d399',
-        backgroundColor: 'rgba(52,211,153,0.15)',
+        borderColor: palette.star,
+        backgroundColor: palette.star,
         tension: 0.25,
         spanGaps: true,
       },
       {
         label: 'fork 数',
         data: ordered.map((snapshot) => snapshot.forks),
-        borderColor: '#38bdf8',
-        backgroundColor: 'rgba(56,189,248,0.15)',
+        borderColor: palette.fork,
+        backgroundColor: palette.fork,
         tension: 0.25,
         spanGaps: true,
       },
@@ -88,8 +99,8 @@ export function TrendChart({ trend }: TrendChartProps) {
   };
 
   return (
-    <div className="h-64 w-full">
-      <Line options={OPTIONS} data={data} />
+    <div className={`w-full ${compact ? 'h-36' : 'h-64'}`}>
+      <Line options={chartOptions(palette)} data={data} />
     </div>
   );
 }
