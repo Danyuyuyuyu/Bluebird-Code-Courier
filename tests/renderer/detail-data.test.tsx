@@ -24,6 +24,9 @@ import { createStub } from './helpers';
 let view: RenderResult | null = null;
 let handle: StubHandle;
 
+/** 列表组件都要 owner/name 才能拼外链目标。 */
+const REPO = { owner: 'octocat', name: 'Hello-World' };
+
 afterEach(async () => {
   if (view) await view.unmount();
   view = null;
@@ -105,6 +108,8 @@ describe('发版列表 · 类型与层级', () => {
           makeRelease('dsh-v0.1.7-alpha.1', '内测 1'),
           makeRelease('dsh-v0.1.7-beta.1', '公测 1'),
         ]}
+        owner={REPO.owner}
+        name={REPO.name}
       />,
     );
 
@@ -117,7 +122,11 @@ describe('发版列表 · 类型与层级', () => {
 
   it('不确定的 tag 不显示任何类型徽章，也绝不出现 Stable', async () => {
     await render(
-      <ReleaseList releases={[makeRelease('v1.2.3', '正式版'), makeRelease('nightly-2026-09-27', '')]} />,
+      <ReleaseList
+        releases={[makeRelease('v1.2.3', '正式版'), makeRelease('nightly-2026-09-27', '')]}
+        owner={REPO.owner}
+        name={REPO.name}
+      />,
     );
 
     const text = document.body.textContent ?? '';
@@ -130,7 +139,11 @@ describe('发版列表 · 类型与层级', () => {
 
   it('标题与 tag 相同时 tag 只出现一次；层级是 Tag → 日期 → 标题', async () => {
     await render(
-      <ReleaseList releases={[makeRelease('dsh-v0.1.7-rc.2', 'dsh-v0.1.7-rc.2'), makeRelease('v1.2.3', '正式版')]} />,
+      <ReleaseList
+        releases={[makeRelease('dsh-v0.1.7-rc.2', 'dsh-v0.1.7-rc.2'), makeRelease('v1.2.3', '正式版')]}
+        owner={REPO.owner}
+        name={REPO.name}
+      />,
     );
 
     const [sameTag, differentTitle] = listRows();
@@ -143,7 +156,7 @@ describe('发版列表 · 类型与层级', () => {
   });
 
   it('无发版时给紧凑空态', async () => {
-    await render(<ReleaseTab releases={[]} />);
+    await render(<ReleaseTab releases={[]} owner={REPO.owner} name={REPO.name} />);
 
     expect(document.body.textContent).toContain('无发版');
     expect(listRows()).toHaveLength(0);
@@ -155,7 +168,7 @@ describe('发版列表 · 类型与层级', () => {
 describe('提交列表 · 信息层级', () => {
   it('消息是第一视觉层：一行截断并保留完整文本', async () => {
     const long = 'Merge pull request #5180 from deepseek-ai/fix-token-refresh-race-condition-and-retry';
-    await render(<CommitList commits={[makeCommit(1, long)]} />);
+    await render(<CommitList commits={[makeCommit(1, long)]} owner={REPO.owner} name={REPO.name} />);
 
     const row = rowAt(0);
     const message = row.children[0] as HTMLElement;
@@ -167,15 +180,17 @@ describe('提交列表 · 信息层级', () => {
   });
 
   it('SHA 是次要信息：等宽弱色、排在作者与时间之后', async () => {
-    await render(<CommitList commits={[makeCommit(1)]} />);
+    await render(<CommitList commits={[makeCommit(1)]} owner={REPO.owner} name={REPO.name} />);
 
     const row = rowAt(0);
-    const sha = [...row.querySelectorAll<HTMLElement>('span')].find((span) =>
-      /^[0-9a-f]{7}$/.test(span.textContent ?? ''),
+    const sha = [...row.querySelectorAll<HTMLElement>('button')].find((button) =>
+      /^[0-9a-f]{7}$/.test(button.textContent ?? ''),
     );
     expect(sha).toBeDefined();
     expect(sha?.className).toContain('font-mono');
     expect(sha?.className).toContain('text-muted');
+    // 可点开 GitHub 上的该次提交
+    expect(sha?.getAttribute('aria-label')).toBe('在 GitHub 打开提交 17b4f41');
 
     const meta = row.children[1] as HTMLElement;
     expect(meta.textContent).toContain('Turtle');
@@ -193,11 +208,11 @@ describe('提交列表 · 信息层级', () => {
     expect(listRows(summary as HTMLElement)).toHaveLength(5);
     expect(summary?.textContent).toContain('已抓取 12 条');
 
-    await render(<CommitTab commits={commits} />);
+    await render(<CommitTab commits={commits} owner={REPO.owner} name={REPO.name} />);
     expect(listRows()).toHaveLength(12);
     expect(document.body.textContent).toContain('已抓取 12 条');
 
-    await render(<CommitTab commits={[]} />);
+    await render(<CommitTab commits={[]} owner={REPO.owner} name={REPO.name} />);
     expect(document.body.textContent).toContain('无提交');
   });
 });
@@ -206,7 +221,7 @@ describe('提交列表 · 信息层级', () => {
 
 describe('议题与合并请求 · 有数据与无数据', () => {
   it('两者都为空时只有一行紧凑空态，不摆两个空区块', async () => {
-    await render(<IssuesTab issues={[]} pullRequests={[]} />);
+    await render(<IssuesTab issues={[]} pullRequests={[]} owner={REPO.owner} name={REPO.name} />);
 
     expect(document.body.textContent).toContain('✓ 当前没有开放的 Issue 或 Pull Request');
     expect(document.body.textContent).not.toContain('无议题');
@@ -215,7 +230,14 @@ describe('议题与合并请求 · 有数据与无数据', () => {
   });
 
   it('有数据时先给计数摘要，再分区展示', async () => {
-    await render(<IssuesAndPulls issues={[makeIssue(1), makeIssue(2)]} pullRequests={[makePull(3)]} />);
+    await render(
+      <IssuesAndPulls
+        issues={[makeIssue(1), makeIssue(2)]}
+        pullRequests={[makePull(3)]}
+        owner={REPO.owner}
+        name={REPO.name}
+      />,
+    );
 
     const text = document.body.textContent ?? '';
     expect(text).toContain('议题');
@@ -230,6 +252,8 @@ describe('议题与合并请求 · 有数据与无数据', () => {
       <IssuesAndPulls
         issues={[makeIssue(1)]}
         pullRequests={[makePull(2, 'closed')]}
+        owner={REPO.owner}
+        name={REPO.name}
       />,
     );
 

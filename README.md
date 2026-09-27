@@ -101,10 +101,10 @@ npm run dist
 | Tab | 展示内容 |
 |---|---|
 | 概览 | 构建状态（高权重）、最近 5 条发版、最近 5 条提交、Issue / PR 摘要（都为空时只给一行紧凑提示）、趋势摘要（紧凑 sparkline） |
-| 🏷 发版 | 完整发版列表：标签 → 类型徽章 → 发布日期，标题只在它不等于标签时另起一行 |
-| 📝 提交 | 完整提交列表：消息在前（超长一行截断，悬停看全文），作者 · 相对时间 · SHA 次之，SHA 等宽弱色 |
-| 💬 Issue & PR | 顶部计数摘要 + 分为「议题」「合并请求」两个子区；每行以文字徽章 `Issue` / `PR` 标明类型，状态（开启 / 已关闭）同样是文字 |
-| 🏗 构建 | 最近一次构建：状态徽章（构建通过 / 构建失败 / 构建中 / 无结论 / 无构建）、工作流名、完成时间、原始结论 |
+| 🏷 发版 | 完整发版列表：标签（可点开 GitHub 发版页）→ 类型徽章 → 发布日期，标题只在它不等于标签时另起一行 |
+| 📝 提交 | 完整提交列表：消息在前（超长一行截断，悬停看全文），作者 · 相对时间 · SHA 次之，SHA 等宽弱色且可点开 |
+| 💬 Issue & PR | 顶部计数摘要 + 分为「议题」「合并请求」两个子区；每行以文字徽章 `Issue` / `PR` 标明类型，状态（开启 / 已关闭）同样是文字，`#编号` 可点开对应页面 |
+| 🏗 构建 | 最近一次构建：状态徽章（构建通过 / 构建失败 / 构建中 / 无结论 / 无构建）、工作流名、完成时间、原始结论，有 Actions 地址时给「在 GitHub 查看 ↗」 |
 | 📈 趋势 | Stars 与 Forks 两张**各自独立 Y 轴**的图 + 时间范围 7D / 30D / 90D |
 
 概览与各 Tab 用的是**同一次抓取的数据**，切 Tab 不产生任何 GitHub 请求。
@@ -115,8 +115,8 @@ npm run dist
 
 - **只标 alpha / beta / rc**：tag 里明确写着 `rc` / `rc1` / `beta` / `beta2` / `alpha` 这类词时，才显示 `RC`（蓝）/ `Beta`、`Alpha`（黄）徽章。
 - **不标 Stable**：本应用只保存 tag、标题、发布日期，没有 GitHub 的 prerelease / draft 字段。普通版本号不代表稳定，nightly / canary / snapshot / dev 更不能当成正式版——所以**一律不显示** Stable，宁可不标也不标错。
-- **提交**：消息是第一视觉层，超长消息一行截断（悬停显示完整内容），作者与相对时间次之，7 位 SHA 等宽弱色放行末。
-- **Issue / PR**：类型（Issue / PR）与状态（开启 / 已关闭）都用文字表达，不靠颜色区分。
+- **提交**：消息是第一视觉层，超长消息一行截断（悬停显示完整内容），作者与相对时间次之，7 位 SHA 等宽弱色放行末（点它打开 GitHub 上的该次提交）。
+- **Issue / PR**：类型（Issue / PR）与状态（开启 / 已关闭）都用文字表达，不靠颜色区分；`#编号` 是外链入口。
 - **日期表达只有两种**：会变动的时间（最近活动、提交时间、构建完成时间）用相对时间（`2 天前`）；固定发生过一次的时间（发版日期）用绝对短日期（`2026-09-24`）。趋势横轴用 `MM-DD`。同一个列表里不混用。
 
 ## 📈 历史快照与趋势
@@ -127,6 +127,35 @@ npm run dist
 - 每张图上方给**当前值**与**变化量**（`+142` / `-12` / `0`），变化量后面是记录范围：窗口被真实数据填满才写「过去 7 天」，否则只承认实际记录到的天数（「已记录 2 天」）。
 - **至少要有 2 个点才出图**：0 条显示「暂无趋势数据…」，1 条显示「已有首次记录…」，都**不会**显示 `+0`（那会让人以为整个时间范围都有数据）。
 - 时间范围 7D / 30D / 90D 是**纯本地过滤**，不产生任何 GitHub 请求。
+
+## 🔗 在 GitHub 打开（受控外链）
+
+应用里的 GitHub 实体都能一键跳到对应的原始页面。**渲染层永远拿不到"打开任意链接"的能力**，也永远不会让 OCTO 窗口自己导航过去。
+
+| 入口 | 打开的目标 |
+|---|---|
+| 清单里的 `···` 菜单 → 在 GitHub 打开 | `https://github.com/{owner}/{name}` |
+| 详情页表头 → 在 GitHub 打开 ↗ | 同上 |
+| 发版行的 Tag | `…/releases/tag/{tag}`（tag 整体 encode，`release/v1.0` 不会变成两层路径） |
+| 提交行的 7 位 SHA | `…/commit/{sha}`（传完整 SHA） |
+| 议题 / 合并请求行的 `#编号` | `…/issues/{n}` 与 `…/pull/{n}` |
+| 构建 Tab 的「在 GitHub 查看 ↗」 | 最近一次 Actions 构建页（接口给的地址，本机没有 run id 可构造） |
+
+**安全边界**：渲染层只说"要打开哪个实体"，URL 由主进程拼。
+
+```
+渲染层外链控件 → getApi().openGitHubExternal(target)     ← target 是 { kind, owner, name, … } 描述，不是 URL
+   → preload 唯一窄口（contextBridge 只有这一个方法，没有 shell / openExternal / 任意通道）
+   → IPC octo:openGitHubExternal
+   → 主进程 shell-links：构造 URL + 再次校验（最终信任边界）
+   → shell.openExternal(url)                              ← 系统默认浏览器
+```
+
+- **只放行 `https:` + host 恰为 `github.com`**：`http:`、`file:`、`data:`、`javascript:`、自定义协议、其他域名、`github.com.evil.example` 这类前缀伪装、非默认端口、URL 内嵌凭据一律拒绝。
+- **owner / name 逐段校验字符集**（`[A-Za-z0-9._-]`，且不许是 `.` / `..`），所以拼不出 `../` 之类的路径逃逸；SHA 只认十六进制，编号只认正整数。
+- **非法目标连 `shell` 都不碰**：主进程直接返回 `invalid_target`。打开失败返回 `open_failed`，界面**就地报错**（清单菜单保持展开、详情页在按钮旁给提示），不假装成功。
+- **外链不产生任何抓取**：点任何一个入口都不会增加 GitHub 请求。
+- **没有任何额外权限**：没有 `webview`、没有 `window.open` 转发、没有外部协议注册；`openExternal` 只在 `src/main/shell-links.ts` 这一处被调用。
 
 # 💥 出错时会怎样
 
@@ -179,7 +208,7 @@ npm run dist
 
 ```
 渲染进程 (React)
-   │  window.octo.*  ← 10 个白名单 IPC 通道 (octo:xxx)
+   │  window.octo.*  ← 11 个白名单 IPC 通道 (octo:xxx)：10 个用例门面 + 1 个受控外链
 preload (contextBridge)
    │
 facade  ← 用例边界，渲染层唯一入口；错误在此归一
@@ -193,6 +222,7 @@ core      ← 基础设施：db / github(REST 适配器) / cipher / clock / logg
 
 - **依赖方向单向**：`core` 不依赖 `features`，`features` 之间不互相引用，`facade` 是唯一用例边界（测试也只测这个边界）。
 - **契约在 `src/shared/`**：`types.ts` 定义领域类型与 `OctoFacade`，`ipc.ts` 定义通道常量；preload 内联通道字面量并用字面量类型锁定，与主进程漂移即编译报错。
+- **门面之外只有一条受控旁路**：外链不是用例（不碰数据库、不碰 GitHub），因此不进 `OctoFacade`——它在 `src/main/shell-links.ts` 单独实现，`OctoBridge = OctoFacade & ExternalLinkBridge`，preload 也只多暴露这一个方法。
 - **全依赖注入**：`createFacade({ db, github, cipher, clock, logger })`——GitHub 适配器、加密盒、时钟、日志都可替换，这也是测试得以完全离线的原因。
 - **无推送**：全部为 `ipcMain.handle` 请求/响应，没有 `webContents.send` 主动推送。主题因此**不新增通道**：主进程把偏好交给 Electron（`nativeTheme.themeSource`），渲染层从已有 `getSettings` 读偏好、用 `prefers-color-scheme` 感知系统变化。
 - **时间统一 UTC ISO8601 存储**，展示层转相对时间；`snapshot.day` 用本地日期做去重键。
@@ -269,18 +299,20 @@ icacls node_modules\electron\dist /setintegritylevel "(OI)(CI)Medium" /T /C
 src/
 ├─ main/
 │  ├─ index.ts            组合根：logger → db → facade → ipc → theme → window
-│  ├─ ipc.ts              10 个白名单通道注册（偏好落库后同步 nativeTheme）
+│  ├─ ipc.ts              11 个白名单通道注册（偏好落库后同步 nativeTheme）
 │  ├─ theme.ts            主题偏好 → nativeTheme.themeSource
+│  ├─ shell-links.ts      GitHub 外链：目标 → URL 构造 + 校验 + shell.openExternal
 │  ├─ facade/             用例门面 + 错误归一
 │  ├─ features/           watchlist / fetching / snapshots / settings / repo-input
 │  └─ core/               db / github(port + http 适配器) / cipher / clock / logging
 ├─ preload/index.ts       contextBridge 暴露 window.octo
 ├─ renderer/              React UI：App + pages/ + components/ + lib/
+│  ├─ components/         ExternalLinkButton（唯一的外链控件）
 │  └─ lib/                api / errors / time（时间展示）/ format（千分位）/ trend（趋势计算）
-│                         / release（tag 分类）/ chart-theme / theme
+│                         / release（tag 分类）/ external-link / chart-theme / theme
 └─ shared/                跨进程契约：types.ts + ipc.ts + theme.ts（偏好取值与 effective 主题判定）
 
-tests/                    Vitest 测试（facade/ 门面集成、db/、preload/、renderer/ DOM 交互、helpers/、manual-acceptance/）
+tests/                    Vitest 测试（facade/ 门面集成、db/、main/ 外链守卫、preload/、renderer/ DOM 交互、helpers/、manual-acceptance/）
 docs/adr/                 架构决策记录
 docs/agents/              仓库工程约定（domain / issue-tracker / triage-labels）
 .agents/                  第三方 Agent 技能集（本机保留，不入库）
@@ -305,9 +337,11 @@ npm test   # = build:main + vitest run
 
 覆盖：数据库建表与升级迁移（含 WAL 与 busy_timeout）、令牌校验保存（含系统安全存储不可用）、清单增删与输入归一、门面入参守卫（错型入参不穿出引擎错误）、轻量抓取、抓取落库的事务原子性、全量五类与构建结论归一、快照日档去重、错误归一与降级、请求超时、主题偏好归一（非法值回退 system）。
 
-另有一个特殊回归测试 `tests/preload/preload-sandbox.test.ts`：直接执行编译产物 `dist/main/preload/index.js`，用沙箱 `require` 白名单（`electron/events/timers/url`）复现 Electron ≥20 的限制，断言通道名与 `src/shared/ipc.ts` 逐字一致。
+另有一个特殊回归测试 `tests/preload/preload-sandbox.test.ts`：直接执行编译产物 `dist/main/preload/index.js`，用沙箱 `require` 白名单（`electron/events/timers/url`）复现 Electron ≥20 的限制，断言通道名与 `src/shared/ipc.ts` 逐字一致，并断言网关里**没有** `openExternal` / `shell` / `execute` / `send` 这类通用能力。
 
-**渲染层交互测试**（`tests/renderer/`，文件头 `@vitest-environment happy-dom`）覆盖三组契约。清单侧：仓库数量、点击卡片进详情、`···` 菜单不会误触进详情、菜单开关与 Esc / 外部点击关闭、移除确认 Popover 的取消与确认、移除失败保留仓库并可重试、刷新期间与刷新失败时缓存列表仍在、读取失败不误显示空态、空态只在真实 0 仓库时出现、互动不额外触发全量抓取。主题与设置侧：默认跟随系统、三档切换与偏好落库、保存失败回滚并报错、非法值回退 system、强制模式不跟随系统变化、系统主题运行时切换即时生效、主题切换不触发任何抓取、图表配色随主题重算、浅色下清单/详情/Popover 照常可用且不含硬编码调色板类、令牌状态与保存/测试连接行为。数据表达侧：趋势的空态 / 积累态 / 两点以上、乱序快照仍按时间计算、变化量与范围文案、7D/30D/90D 本地过滤、Stars 与 Forks 各一张图各一条线、发版 tag 分类（rc/alpha/beta 识别与 nightly/canary/snapshot 不误判）、标题与 tag 重复时去重、提交消息截断与 SHA 层级、Issue/PR 计数与文字类型徽章、切 Tab/切范围/切主题都不增加抓取次数。断言对象是 DOM 结构与门面调用计数（`role` / `aria-*` / 可见文案 / `data-theme`）与传给 Chart.js 的配置，不依赖具体色值。
+外链守卫单测 `tests/main/shell-links.test.ts` 覆盖每条 URL 构造规则与完整拒绝矩阵（http / 其他域名 / `javascript:` / `file:` / `data:` / 前缀伪装域名 / 非默认端口 / URL 内嵌凭据 / 路径逃逸 / 非十六进制 SHA / 非法编号 / 未知 kind），并断言**非法目标绝不调用注入的 `open`**、打开失败如实回报 `open_failed`。
+
+**渲染层交互测试**（`tests/renderer/`，文件头 `@vitest-environment happy-dom`）覆盖四组契约。清单侧：仓库数量、点击卡片进详情、`···` 菜单不会误触进详情、菜单开关与 Esc / 外部点击关闭、移除确认 Popover 的取消与确认、移除失败保留仓库并可重试、刷新期间与刷新失败时缓存列表仍在、读取失败不误显示空态、空态只在真实 0 仓库时出现、互动不额外触发全量抓取。主题与设置侧：默认跟随系统、三档切换与偏好落库、保存失败回滚并报错、非法值回退 system、强制模式不跟随系统变化、系统主题运行时切换即时生效、主题切换不触发任何抓取、图表配色随主题重算、浅色下清单/详情/Popover 照常可用且不含硬编码调色板类、令牌状态与保存/测试连接行为。数据表达侧：趋势的空态 / 积累态 / 两点以上、乱序快照仍按时间计算、变化量与范围文案、7D/30D/90D 本地过滤、Stars 与 Forks 各一张图各一条线、发版 tag 分类（rc/alpha/beta 识别与 nightly/canary/snapshot 不误判）、标题与 tag 重复时去重、提交消息截断与 SHA 层级、Issue/PR 计数与文字类型徽章、切 Tab/切范围/切主题都不增加抓取次数。外链侧：菜单两项的顺序与分隔、点菜单外链只调一次窄接口且不进详情、目标是仓库 / 发版 / 提交 / 议题 / 合并请求 / 构建各自的形状、打开失败就地报错（菜单保持展开、详情不打断）且可重试、外链控件都是真 `button`、点击任何入口都不增加 `fetchDetail`。断言对象是 DOM 结构与门面调用计数（`role` / `aria-*` / 可见文案 / `data-theme`）与传给 Chart.js 的配置，不依赖具体色值。
 
 整机行为（Electron 壳、真实 GitHub 网络、窗口尺寸）仍由 [`tests/manual-acceptance/`](tests/manual-acceptance/README.md) 的人工验收矩阵覆盖。
 

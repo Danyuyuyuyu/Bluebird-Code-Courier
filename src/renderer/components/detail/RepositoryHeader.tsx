@@ -1,6 +1,7 @@
 import type { Glance } from '../../../shared/types';
 import { formatCount } from '../../lib/format';
 import { formatRelativeTime, isWithinDays } from '../../lib/time';
+import { ExternalLinkButton } from '../ExternalLinkButton';
 import { GlanceFact } from '../GlanceFact';
 import { Spinner } from '../Spinner';
 
@@ -13,7 +14,7 @@ interface RepositoryHeaderProps {
   onRefetch: () => void;
 }
 
-/** 仓库详情表头：返回监控清单、仓库名、抓取时间、重新抓取、四条核心指标。 */
+/** 仓库详情表头：返回监控清单、仓库名、抓取时间、在 GitHub 打开、重新抓取、四条核心指标。 */
 export function RepositoryHeader({
   fullName,
   repository,
@@ -21,6 +22,9 @@ export function RepositoryHeader({
   onBack,
   onRefetch,
 }: RepositoryHeaderProps) {
+  // 详情数据回来前用清单里的全名兜底，外链按钮不会缺席也不会跳错页（主进程还会再校验一次）
+  const [owner = '', name = ''] = (repository?.fullName ?? fullName).split('/');
+
   return (
     <div className="space-y-3">
       <button
@@ -42,15 +46,24 @@ export function RepositoryHeader({
               {fetching ? <span className="text-secondary"> · 正在更新…</span> : null}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onRefetch}
-            disabled={fetching}
-            className="flex shrink-0 items-center gap-2 rounded-md border border-accent/40 bg-accent-soft px-3 py-1.5 text-sm text-accent transition-colors hover:border-accent/70 hover:bg-accent-soft/70 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {fetching ? <Spinner className="h-3.5 w-3.5" /> : null}
-            {fetching ? '抓取中…' : '重新抓取'}
-          </button>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <ExternalLinkButton
+              target={{ kind: 'repository', owner, name }}
+              label={`在 GitHub 打开 ${repository?.fullName ?? fullName}`}
+              className="rounded-md border border-default px-3 py-1.5 text-sm text-primary transition-colors hover:bg-surface-hover active:bg-surface-active"
+            >
+              在 GitHub 打开 ↗
+            </ExternalLinkButton>
+            <button
+              type="button"
+              onClick={onRefetch}
+              disabled={fetching}
+              className="flex shrink-0 items-center gap-2 rounded-md border border-accent/40 bg-accent-soft px-3 py-1.5 text-sm text-accent transition-colors hover:border-accent/70 hover:bg-accent-soft/70 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {fetching ? <Spinner className="h-3.5 w-3.5" /> : null}
+              {fetching ? '抓取中…' : '重新抓取'}
+            </button>
+          </div>
         </div>
 
         <div className="mt-4 flex flex-wrap items-baseline gap-x-6 gap-y-2">

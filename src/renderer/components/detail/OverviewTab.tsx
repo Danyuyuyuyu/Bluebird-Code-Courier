@@ -25,10 +25,14 @@ function RecentList({
   title,
   kind,
   items,
+  owner,
+  name,
 }: {
   title: string;
   kind: 'issue' | 'pull';
   items: (IssueItem | PullRequestItem)[];
+  owner: string;
+  name: string;
 }) {
   return (
     <div>
@@ -38,7 +42,13 @@ function RecentList({
       ) : (
         <ul className="divide-y divide-subtle">
           {items.map((item, index) => (
-            <NumberedItemRow key={`${item.number}|${index}`} item={item} kind={kind} />
+            <NumberedItemRow
+              key={`${item.number}|${index}`}
+              item={item}
+              kind={kind}
+              owner={owner}
+              name={name}
+            />
           ))}
         </ul>
       )}
@@ -48,7 +58,8 @@ function RecentList({
 
 /** 概览：第一屏回答"这个仓库最近怎么样"——构建是否正常、最近发了什么、最近在改什么。 */
 export function OverviewTab({ detail }: OverviewTabProps) {
-  const { build, releases, commits, issues, pullRequests, trend } = detail;
+  const { repository, build, releases, commits, issues, pullRequests, trend } = detail;
+  const { owner, name } = repository;
   const openIssues = issues.filter((issue) => issue.state === 'open').length;
   const openPulls = pullRequests.filter((pull) => pull.state === 'open').length;
   const noIssuesAtAll = issues.length === 0 && pullRequests.length === 0;
@@ -69,7 +80,7 @@ export function OverviewTab({ detail }: OverviewTabProps) {
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="min-w-0">
           <Section title="最新发版">
-            <ReleaseList releases={releases.slice(0, SUMMARY_LIMIT)} />
+            <ReleaseList releases={releases.slice(0, SUMMARY_LIMIT)} owner={owner} name={name} />
             {releases.length > SUMMARY_LIMIT ? (
               <p className="mt-2 text-xs text-muted">
                 仅显示最近 {SUMMARY_LIMIT} 条，已抓取 {releases.length} 条
@@ -80,7 +91,7 @@ export function OverviewTab({ detail }: OverviewTabProps) {
 
         <div className="min-w-0">
           <Section title="最近提交">
-            <CommitList commits={commits.slice(0, SUMMARY_LIMIT)} />
+            <CommitList commits={commits.slice(0, SUMMARY_LIMIT)} owner={owner} name={name} />
             {commits.length > SUMMARY_LIMIT ? (
               <p className="mt-2 text-xs text-muted">
                 仅显示最近 {SUMMARY_LIMIT} 条，已抓取 {commits.length} 条
@@ -110,11 +121,15 @@ export function OverviewTab({ detail }: OverviewTabProps) {
                 title="最近更新的议题"
                 kind="issue"
                 items={[...issues].sort(byUpdatedDesc).slice(0, RECENT_LIMIT)}
+                owner={owner}
+                name={name}
               />
               <RecentList
                 title="最近更新的合并请求"
                 kind="pull"
                 items={[...pullRequests].sort(byUpdatedDesc).slice(0, RECENT_LIMIT)}
+                owner={owner}
+                name={name}
               />
             </div>
           </div>

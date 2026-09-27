@@ -622,6 +622,14 @@ Issues & Pull Requests
 - Pending → Amber
 - Neutral → Gray
 
+## 11.1 实际实现（2026-09-27）——外链通道
+
+计划里的「查看 ↗」没有做成裸链接，而是先建立一条**受控外链通道**：渲染层只说明要打开哪个 GitHub 实体，URL 由主进程构造并再校验，最后交给 `shell.openExternal`。
+
+- 已接入口：清单 `···` 菜单、详情页表头、发版 Tag、提交 SHA、议题 / PR 编号，以及构建 Tab 的「在 GitHub 查看 ↗」（Actions 地址来自接口的 `html_url`，本机没有 run id 可构造）。
+- 安全边界：只放行 `https:` + host 恰为 `github.com` 的地址，非法目标连 `shell` 都不碰；OCTO 窗口永远不会被导航离开应用。规则与拒绝清单见 README「在 GitHub 打开（受控外链）」。
+- 未做：把构建状态整块做成计划里的三段式卡片（含 run 标题那一行）属于 Phase 14 视觉 Polish，本轮只补外链入口。
+
 ---
 
 # Phase 12 · 公共组件统一

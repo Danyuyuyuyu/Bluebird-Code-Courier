@@ -4,7 +4,7 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { AddRepositoryResult, AccessTokenResult, Detail, Glance, OctoBridge, Snapshot } from '../../src/shared/types';
+import type { AddRepositoryResult, AccessTokenResult, Detail, Glance, GitHubExternalTarget, OctoBridge, OpenExternalResult, Snapshot } from '../../src/shared/types';
 import { App } from '../../src/renderer/App';
 import { ThemeProvider } from '../../src/renderer/lib/theme';
 
@@ -67,6 +67,7 @@ export interface StubCalls {
   fetchDetail: number;
   addRepository: number;
   removeRepository: number;
+  openGitHubExternal: number;
 }
 
 export interface StubHandle {
@@ -76,6 +77,8 @@ export interface StubHandle {
   readonly preferences: Record<string, string>;
   /** 收到过的 updateSettings 补丁，按顺序。 */
   settingsPatches: Array<Record<string, string>>;
+  /** 收到过的外链目标，按顺序（断言"点了哪条外链"）。 */
+  externalTargets: GitHubExternalTarget[];
   /** 下次 listRepositories 返回的清单（删除成功后用它模拟清单缩小）。 */
   setRepositories(repositories: Glance[]): void;
   /** 让下一次 listRepositories 挂起，返回放行函数。 */
@@ -84,6 +87,8 @@ export interface StubHandle {
   holdNextRefresh(): () => void;
   /** 让下一次 removeRepository 挂起，返回放行函数。 */
   holdNextRemove(): () => void;
+  /** 让下一次 openGitHubExternal 挂起，返回放行函数。 */
+  holdNextOpen(): () => void;
 }
 
 export interface StubOptions {
@@ -103,6 +108,8 @@ export interface StubOptions {
   validateTokenResult?: AccessTokenResult;
   /** 覆盖全量信息的各分区（trend / releases / commits / issues / pullRequests / build）。 */
   detail?: Partial<Detail>;
+  /** openGitHubExternal 的返回（默认成功）。 */
+  openExternalResult?: OpenExternalResult;
 }
 
 export function makeGlance(id: number, fullName: string): Glance {
@@ -160,6 +167,7 @@ export function createStub(options: StubOptions = {}): StubHandle {
   let listGate: Promise<void> | null = null;
   let gate: Promise<void> | null = null;
   let removeGate: Promise<void> | null = null;
+  let openGate: Promise<void> | null = null;
   const calls: StubCalls = {
     accessTokenState: 0,
     saveAccessToken: 0,
@@ -171,7 +179,9 @@ export function createStub(options: StubOptions = {}): StubHandle {
     fetchDetail: 0,
     addRepository: 0,
     removeRepository: 0,
+    openGitHubExternal: 0,
   };
+  const externalTargets: GitHubExternalTarget[] = [];
 
   const api: OctoBridge = {
     async accessTokenState() {
@@ -231,6 +241,12 @@ export function createStub(options: StubOptions = {}): StubHandle {
       if (!repository) return { detail: null, error: null };
       return { detail: makeDetail(repository, options.detail), error: null };
     },
+    async openGitHubExternal(target) {
+      calls.openGitHubExternal += 1;
+      externalTargets.push(target);
+      if (openGate) await openGate;
+      return options.openExternalResult ?? { ok: true, reason: null };
+    },
   };
 
   return {
@@ -240,6 +256,7 @@ export function createStub(options: StubOptions = {}): StubHandle {
       return { ...preferences };
     },
     settingsPatches,
+    externalTargets,
     setRepositories(next) {
       repositories = next;
     },
@@ -268,6 +285,16 @@ export function createStub(options: StubOptions = {}): StubHandle {
       removeGate = new Promise<void>((resolve) => {
         release = () => {
           removeGate = null;
+          resolve();
+        };
+      });
+      return release;
+    },
+    holdNextOpen() {
+      let release = (): void => {};
+      openGate = new Promise<void>((resolve) => {
+        release = () => {
+          openGate = null;
           resolve();
         };
       });
@@ -388,6 +415,15 @@ export function buttonByText(text: string): HTMLButtonElement | null {
   return (
     [...document.querySelectorAll<HTMLButtonElement>('button')].find(
       (button) => button.textContent?.trim() === text,
+    ) ?? null
+  );
+}
+
+/** 按 aria-label 取按钮：外链控件的无障碍名是这轮的主要断言对象。 */
+export function buttonByLabel(label: string): HTMLButtonElement | null {
+  return (
+    [...document.querySelectorAll<HTMLButtonElement>('button')].find(
+      (button) => button.getAttribute('aria-label') === label,
     ) ?? null
   );
 }

@@ -22,13 +22,15 @@ interface DetailPageProps {
 }
 
 function TabPanel({ tab, detail }: { tab: DetailTabId; detail: Detail }) {
+  // 外链目标只需要 owner/name，一律取自接口回来的规范值
+  const { owner, name } = detail.repository;
   switch (tab) {
     case 'releases':
-      return <ReleaseTab releases={detail.releases} />;
+      return <ReleaseTab releases={detail.releases} owner={owner} name={name} />;
     case 'commits':
-      return <CommitTab commits={detail.commits} />;
+      return <CommitTab commits={detail.commits} owner={owner} name={name} />;
     case 'issues':
-      return <IssuesTab issues={detail.issues} pullRequests={detail.pullRequests} />;
+      return <IssuesTab issues={detail.issues} pullRequests={detail.pullRequests} owner={owner} name={name} />;
     case 'build':
       return <BuildTab build={detail.build} />;
     case 'trend':

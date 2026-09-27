@@ -1,6 +1,7 @@
-import { ipcMain } from 'electron';
+import { ipcMain, shell } from 'electron';
 import { IPC_CHANNELS } from '../shared/ipc';
 import type { OctoFacade } from '../shared/types';
+import { openGitHubExternal } from './shell-links';
 import { applyThemeSource } from './theme';
 
 /**
@@ -25,4 +26,8 @@ export function registerIpc(facade: OctoFacade): void {
   );
   ipcMain.handle(IPC_CHANNELS.refreshGlance, () => facade.refreshGlance());
   ipcMain.handle(IPC_CHANNELS.fetchDetail, (_event, repositoryId: number) => facade.fetchDetail(repositoryId));
+  // 桌面集成不属于用例门面：门面只碰数据库与 GitHub，这里只碰系统浏览器
+  ipcMain.handle(IPC_CHANNELS.openGitHubExternal, (_event, target: unknown) =>
+    openGitHubExternal(target, (url) => shell.openExternal(url)),
+  );
 }

@@ -6,13 +6,17 @@ import { IssuesAndPulls } from './IssuesAndPulls';
 export function IssuesTab({
   issues,
   pullRequests,
+  owner,
+  name,
 }: {
   issues: Detail['issues'];
   pullRequests: Detail['pullRequests'];
+  owner: string;
+  name: string;
 }) {
   return (
     <Section title="Issue & PR">
-      <IssuesAndPulls issues={issues} pullRequests={pullRequests} />
+      <IssuesAndPulls issues={issues} pullRequests={pullRequests} owner={owner} name={name} />
     </Section>
   );
 }

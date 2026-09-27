@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Glance } from '../../../shared/types';
+import { getApi } from '../../lib/api';
+import { describeOpenFailure } from '../../lib/external-link';
 import { RemoveRepositoryPopover } from './RemoveRepositoryPopover';
 
 /** closed → 无浮层；menu → ··· 菜单；confirm → 移除确认 Popover。 */
@@ -66,6 +68,28 @@ export function RepositoryActions({ repo, onRemove }: RepositoryActionsProps) {
     }
   }
 
+  /** 跳 GitHub：成功了才收起菜单；失败时菜单留着，就地报错，不让人误以为已经跳走。 */
+  async function handleOpenExternal(): Promise<void> {
+    // 调用期间锁住菜单：否则结果回来时菜单已被点掉，失败提示就没地方显示
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await getApi().openGitHubExternal({
+        kind: 'repository',
+        owner: repo.owner,
+        name: repo.name,
+      });
+      if (!result.ok) {
+        setError(describeOpenFailure(result.reason));
+        return;
+      }
+      setStage('closed');
+      triggerRef.current?.focus();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div ref={containerRef} className="relative shrink-0">
       <button
@@ -90,11 +114,29 @@ export function RepositoryActions({ repo, onRemove }: RepositoryActionsProps) {
             ref={menuItemRef}
             type="button"
             role="menuitem"
-            onClick={() => setStage('confirm')}
+            aria-label={`在 GitHub 打开 ${repo.fullName}`}
+            onClick={() => void handleOpenExternal()}
+            className="block w-full px-3 py-1.5 text-left text-sm text-primary transition-colors hover:bg-surface-hover active:bg-surface-active"
+          >
+            在 GitHub 打开
+          </button>
+          <div role="separator" className="my-1 border-t border-subtle" />
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setError(null);
+              setStage('confirm');
+            }}
             className="block w-full px-3 py-1.5 text-left text-sm text-primary transition-colors hover:bg-surface-hover active:bg-surface-active"
           >
             从监控清单移除
           </button>
+          {error ? (
+            <p role="alert" className="px-3 py-1.5 text-xs text-danger">
+              {error}
+            </p>
+          ) : null}
         </div>
       ) : null}
 

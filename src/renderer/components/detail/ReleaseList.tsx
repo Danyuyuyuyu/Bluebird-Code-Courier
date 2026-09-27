@@ -2,6 +2,7 @@ import type { ReleaseItem } from '../../../shared/types';
 import { PRERELEASE_LABELS, classifyReleaseTag, dedupeReleaseTitle } from '../../lib/release';
 import type { PrereleaseKind } from '../../lib/release';
 import { formatDate } from '../../lib/time';
+import { ExternalLinkButton } from '../ExternalLinkButton';
 
 /**
  * 预发布类型徽章：只在 tag 里明确写了 alpha / beta / rc 时出现。
@@ -23,8 +24,14 @@ export function ReleaseKindBadge({ tagName }: { tagName: string }) {
   );
 }
 
-/** 发版行：Tag → 类型 → 发布日期，标题只在它与 Tag 不同时另起一行。 */
-export function ReleaseList({ releases }: { releases: ReleaseItem[] }) {
+interface ReleaseListProps {
+  releases: ReleaseItem[];
+  owner: string;
+  name: string;
+}
+
+/** 发版行：Tag（可点开 GitHub 发版页）→ 类型 → 发布日期，标题只在它与 Tag 不同时另起一行。 */
+export function ReleaseList({ releases, owner, name }: ReleaseListProps) {
   if (releases.length === 0) {
     return <p className="text-sm text-muted">无发版</p>;
   }
@@ -35,7 +42,13 @@ export function ReleaseList({ releases }: { releases: ReleaseItem[] }) {
         return (
           <li key={`${release.tagName}|${index}`} className="py-2 first:pt-0 last:pb-0">
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <span className="break-all font-mono text-xs text-accent">{release.tagName}</span>
+              <ExternalLinkButton
+                target={{ kind: 'release', owner, name, tagName: release.tagName }}
+                label={`在 GitHub 打开发版 ${release.tagName}`}
+                className="break-all font-mono text-xs text-accent transition-colors hover:underline"
+              >
+                {release.tagName}
+              </ExternalLinkButton>
               <ReleaseKindBadge tagName={release.tagName} />
               <span className="ml-auto shrink-0 text-xs text-muted">{formatDate(release.publishedAt)}</span>
             </div>

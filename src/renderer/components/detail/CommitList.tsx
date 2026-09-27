@@ -1,15 +1,18 @@
 import type { CommitItem } from '../../../shared/types';
 import { formatRelativeTime } from '../../lib/time';
+import { ExternalLinkButton } from '../ExternalLinkButton';
 
 interface CommitListProps {
   commits: CommitItem[];
+  owner: string;
+  name: string;
 }
 
 /**
  * 提交行：消息（第一视觉层，超长一行截断、title 露出全文）→ 作者 · 相对时间 → SHA。
- * SHA 用等宽弱色放在行末，只作定位用，不抢注意力。
+ * SHA 用等宽弱色放在行末，只作定位用，不抢注意力，点它可打开 GitHub 上的该次提交。
  */
-export function CommitList({ commits }: CommitListProps) {
+export function CommitList({ commits, owner, name }: CommitListProps) {
   if (commits.length === 0) {
     return <p className="text-sm text-muted">无提交</p>;
   }
@@ -29,7 +32,13 @@ export function CommitList({ commits }: CommitListProps) {
             <span aria-hidden="true" className="text-muted">
               ·
             </span>
-            <span className="font-mono text-muted">{commit.sha.slice(0, 7)}</span>
+            <ExternalLinkButton
+              target={{ kind: 'commit', owner, name, sha: commit.sha }}
+              label={`在 GitHub 打开提交 ${commit.sha.slice(0, 7)}`}
+              className="font-mono text-muted transition-colors hover:text-secondary hover:underline"
+            >
+              {commit.sha.slice(0, 7)}
+            </ExternalLinkButton>
           </div>
         </li>
       ))}
